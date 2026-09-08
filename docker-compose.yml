@@ -1,0 +1,36 @@
+services:
+  backend:
+    build:
+      context: .
+      target: backend-development
+    environment:
+      TTB_ENVIRONMENT: development
+      TTB_LOG_LEVEL: ${TTB_LOG_LEVEL:-INFO}
+      TTB_CORS_ORIGINS: '["http://localhost:5173","http://127.0.0.1:5173"]'
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./backend/app:/app/backend/app
+      - ./backend/tests:/app/backend/tests
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: .
+      target: frontend-development
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    ports:
+      - "127.0.0.1:5173:5173"
+    volumes:
+      - ./frontend/src:/app/frontend/src
+      - ./frontend/index.html:/app/frontend/index.html
+      - ./frontend/vite.config.ts:/app/frontend/vite.config.ts
+    depends_on:
+      backend:
+        condition: service_healthy
