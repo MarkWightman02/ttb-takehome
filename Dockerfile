@@ -15,6 +15,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends tesseract-ocr tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
 COPY backend/ ./backend/
 RUN python -m pip install --no-cache-dir -c backend/constraints.txt ./backend
 

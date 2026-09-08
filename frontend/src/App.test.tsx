@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import App from './App';
 
 describe('application shell', () => {
-  it('labels unfinished workflow areas without collecting application data or files', () => {
+  it('shows the OCR workflow while clearly deferring application comparison', () => {
     vi.stubEnv('DEV', false);
     render(<App />);
 
@@ -13,22 +13,21 @@ describe('application shell', () => {
     expect(
       screen.getByRole('region', { name: 'Application data' }),
     ).toBeVisible();
-    expect(screen.getByRole('region', { name: 'Label upload' })).toBeVisible();
     expect(
-      screen.getByRole('region', { name: 'Verification results' }),
+      screen.getByRole('region', { name: 'Upload label image' }),
     ).toBeVisible();
     expect(
-      screen.getByText(
-        /entering data, uploading labels and verifying labels are not available yet/i,
-      ),
+      screen.getByRole('region', { name: 'Extracted label text' }),
     ).toBeVisible();
     expect(
-      screen.getByText('No verification has been performed.'),
+      screen.getByText(/image upload and raw text extraction are available/i),
     ).toBeVisible();
+    expect(screen.getByText('No label text has been extracted.')).toBeVisible();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(
-      document.querySelector('input[type="file"]'),
-    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Label image')).toHaveAttribute(
+      'accept',
+      'image/png,image/jpeg,image/webp',
+    );
     expect(
       screen.getByRole('link', { name: 'Skip to main content' }),
     ).toHaveAttribute('href', '#main-content');

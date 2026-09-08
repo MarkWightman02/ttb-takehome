@@ -27,14 +27,23 @@ class OcrResult:
     image_width: int
     image_height: int
     engine_name: str
+    duration_ms: float
+    warnings: tuple[str, ...] = ()
+
+
+class OcrUnavailableError(RuntimeError):
+    """The configured local OCR runtime cannot be started."""
+
+
+class OcrProcessingError(RuntimeError):
+    """The OCR runtime started but could not process the image."""
 
 
 class OcrService(Protocol):
-    """Extract evidence from one image without retaining its bytes.
+    """Extract evidence from one request-scoped, preprocessed image.
 
-    Future adapters must document supported formats and limits. CPU-bound engines
-    must execute outside the event loop. Extraction provides evidence, never a
-    compliance decision; unknown style/confidence must remain explicit.
+    Adapters must not retain image bytes. Extraction provides evidence, never a
+    compliance decision; unknown style or confidence must remain explicit.
     """
 
     async def extract(self, image: bytes, *, media_type: str) -> OcrResult: ...

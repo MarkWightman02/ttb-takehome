@@ -9,8 +9,10 @@ description = "Standalone alcohol label verification prototype API"
 requires-python = ">=3.12"
 dependencies = [
     "fastapi==0.141.1",
+    "pillow==12.3.0",
     "pydantic==2.13.5",
     "pydantic-settings==2.15.0",
+    "python-multipart==0.0.32",
     "uvicorn==0.52.4",
 ]
 

@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import field_validator
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Resolve the repository .env consistently when started from backend/ or the root.
@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
     frontend_dist: Path | None = None
+    max_upload_bytes: int = Field(default=10 * 1024 * 1024, gt=0)
+    max_image_width: int = Field(default=12_000, gt=0)
+    max_image_height: int = Field(default=12_000, gt=0)
+    max_image_pixels: int = Field(default=40_000_000, gt=0)
+    tesseract_command: str = "tesseract"
+    tesseract_language: str = "eng"
+    ocr_timeout_seconds: float = Field(default=5.0, gt=0, le=60)
 
     @field_validator("cors_origins")
     @classmethod
