@@ -8,11 +8,11 @@ The [instruction repository][spec], including its stakeholder interviews, is the
 
 ### Implemented foundation and verification slices
 
-| Requirement | Source / stakeholder | Priority | Planned implementation | Acceptance criterion |
+| Requirement | Source / stakeholder | Priority | Implementation | Acceptance criterion |
 | --- | --- | --- | --- | --- |
 | Required stack and monorepo | User | Now | React, TypeScript, Vite frontend; Python, FastAPI backend; separate `frontend/`, `backend/`, and `docs/` | Both applications start locally; pytest and Vitest are configured. |
 | Backend foundation | User | Now | Typed `/api/health`, structured configuration, explicit development CORS, centralized errors, logging, organized modules | `GET /api/health` returns HTTP 200 and `{"status":"ok","service":"ttb-label-verification"}`; backend tests pass. |
-| Replaceable local OCR | User; [Marcus][marcus] | Implemented | Run local Tesseract TSV behind the typed OCR protocol; no hosted OCR or LLM API | One provider call returns raw text, word hierarchy, confidence, geometry, engine, duration, and warnings. |
+| Replaceable local OCR | User; [Marcus][marcus] | Implemented | Run local Tesseract TSV behind the typed OCR protocol; no hosted OCR or LLM API | Each provider call returns raw text, word hierarchy, confidence, geometry, engine, duration, and warnings. |
 | Clear, accessible verification workflow | User; [Sarah][sarah] | Implemented | Application fields, single-image upload, one primary verify action, field results, secondary raw evidence | Semantic landmarks, labeled controls, keyboard operation, loading announcement, focused errors, readable contrast, and text status labels. |
 | Frontend/backend connection | User | Now | Frontend requests `/api/health`; show backend availability in development | Development reports success and handles an unavailable backend; production omits the diagnostic indicator. |
 | Single-label image upload | User | Implemented | `POST /api/labels/ocr` accepts exactly one multipart image | PNG, JPEG, and WebP images produce a typed raw OCR response; missing or multiple files are rejected. |
@@ -23,9 +23,9 @@ The [instruction repository][spec], including its stakeholder interviews, is the
 | Container deployment foundation | User | Now | Dockerfile builds the frontend and packages it with FastAPI; Compose supports development | Production frontend and API share one container; Docker build is checked when available. |
 | Reviewer documentation | User; [deliverables][deliverables] | Now | Requirements, architecture and README covering setup, tests, Docker, assumptions and status | Instructions match implemented behavior; verification results and any unavailable checks are reported. |
 
-### Product behavior: subsequent implementation
+### Implemented product behavior
 
-| Requirement | Source / stakeholder | Priority | Planned implementation | Acceptance criterion |
+| Requirement | Source / stakeholder | Priority | Implementation | Acceptance criterion |
 | --- | --- | --- | --- | --- |
 | Compare core application data with one label | [Sarah][sarah]; User | Implemented | Typed multipart verification endpoint; one full-image OCR pass plus at most three evidence-triggered crop refinements; separate deterministic extraction, normalization, and comparison layers | Brand, class/type, ABV, and net contents return `match`, `review`, `mismatch`, or `not_found` with evidence and explanations. |
 | Producer/bottler name and address; imported origin | [Label requirements][fields] | Implemented | Cue-based deterministic extraction; conservative name/address comparison; explicit import toggle and conditional origin | Evidence and explanations are preserved; domestic origin is `not_applicable`; uncertainty routes to review. |
@@ -44,15 +44,15 @@ The warning checks implement only the cited Part 16 and TTB requirements. Core A
 
 ## Important enhancement
 
-| Requirement | Source / stakeholder | Priority | Planned implementation | Acceptance criterion |
+| Requirement | Source / stakeholder | Priority | Implementation | Acceptance criterion |
 | --- | --- | --- | --- | --- |
-| Batch uploads | [Sarah][sarah]; User | Deferred | After reliable single-label workflow | Multiple labels can be submitted together; determine capacity after the single-label baseline. |
+| Batch uploads | [Sarah][sarah]; User | Deferred | Outside this single-label prototype | Multiple labels can be submitted together; determine capacity before any future implementation. |
 
 The interview's 200–300-application deliveries describe workload context, not a prescribed batch limit.
 
 ## Future / out of scope
 
-| Requirement | Source / stakeholder | Priority | Planned implementation | Acceptance criterion |
+| Requirement | Source / stakeholder | Priority | Implementation | Acceptance criterion |
 | --- | --- | --- | --- | --- |
 | Difficult photographs | [Jenny][jenny] | Optional, deferred | Explore angle, lighting and glare handling | Evaluate representative difficult images. |
 | Accessible deployed prototype | [Deliverables][deliverables] | Implemented | Deploy the completed core without changing its standalone architecture | Reviewers can use `https://ttb.markwightman.org`; local and Docker paths remain documented. |

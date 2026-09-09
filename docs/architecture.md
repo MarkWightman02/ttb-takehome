@@ -48,7 +48,7 @@ Continuity locates both prescribed clauses semantically, checks their order, ide
 
 Container volume selects the 1/2/3 mm and 40/25/12 CPI regulatory tiers. Physical size and CPI remain `review` because normal raster artwork provides no trustworthy scale. The implementation does not convert arbitrary DPI metadata or pixel counts into physical measurements. This is consistent with [TTB's warning about distortions in submitted label images](https://www.ttb.gov/public-information/industry-circulars/archives/2011/11-04).
 
-The specification lists common fields but does not define a complete rule set for every beverage. Before implementing those rules, verify applicable TTB primary sources, document beverage-specific exceptions, and add representative fixtures. Do not turn the common-field list into unconditional requirements or guess regulatory tolerances.
+The specification lists common fields but does not define a complete rule set for every beverage. This prototype therefore does not turn that list into unconditional requirements or guess beverage-specific exceptions and regulatory tolerances.
 
 ## Errors and configuration
 
@@ -60,7 +60,7 @@ The health endpoint returns `{"status":"ok","service":"ttb-label-verification"}`
 
 The approximately five-second normal-label target remains a product goal. Raw OCR responses report processing and OCR durations; verification responses report total verification, cumulative OCR, refinement duration, call count, and refinement evidence. Full-image OCR is limited to five seconds by default; each of at most three optional crop calls is limited to one second. Uploads are limited to 10 MB, 12,000 pixels per edge, and 40 million pixels. On the audited Linux host, the 18-case generated corpus used one call per case with a roughly 502 ms median and 764 ms slowest total. The six-example real set used a 1.5-call median, 4-call maximum, roughly 957 ms median, and 1.20-second slowest total. Neither small regression set is a general timing or accuracy guarantee. A queue or batch engine is unnecessary for this single-label slice.
 
-Mandatory cloud inference would conflict with the stakeholder's restricted outbound connectivity. The protocol keeps the deployment able to use local OCR and image analysis. Building the container and installing dependencies currently require package-registry access; a restricted deployment should receive a prebuilt image with any eventual model assets included. Runtime health and static serving require no outbound connection.
+Runtime verification uses local OCR and image analysis without a mandatory cloud service. Building the container and installing dependencies require package-registry access; a restricted environment can receive a prebuilt image. Runtime health, OCR, and static serving require no outbound connection.
 
 ## Deployment and tradeoffs
 

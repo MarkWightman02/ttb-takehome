@@ -1,48 +1,57 @@
 # TTB Label Verification
 
-A standalone prototype for extracting text from alcohol-label artwork and comparing common fields with expected application data. The [take-home specification](https://github.com/treasurytakehome-rgb/instructions), including its stakeholder interviews, defines the intended product.
+A standalone decision-support prototype for Treasury/TTB label reviewers. It extracts visible information from submitted alcohol-label artwork and compares it with application values supplied by the reviewer. The [take-home instructions](https://github.com/treasurytakehome-rgb/instructions) and stakeholder interviews define its scope.
 
-## Live demo
+## Try the live demo
 
-[https://ttb.markwightman.org](https://ttb.markwightman.org)
+[Open the reviewer prototype](https://ttb.markwightman.org)
 
-## What it does
+This hosted prototype is a take-home demonstration, not an official Treasury or TTB service. It does not approve applications or determine legal compliance.
 
-The reviewer enters application data, uploads one PNG, JPEG, or WebP label, and selects **Verify Label**. The application runs local OCR once, compares structured label evidence with the supplied values, analyzes the Government Health Warning, and presents field-level results with explanations and optional raw OCR evidence.
+## Reviewer workflow
 
-Results support reviewer decisions. They do not approve or reject an application and do not determine legal compliance.
+1. Start with the expected application/COLA data.
+2. Enter the brand, class/type, ABV, net contents, responsible party, address, and import information.
+3. Upload one submitted PNG, JPEG, or WebP label image.
+4. Select **Verify Label**.
+5. Review the extracted evidence, field comparisons, and Government Health Warning checks.
 
-## Why this approach
+The application runs local OCR, extracts visible label information, and identifies matches, discrepancies, missing evidence, and uncertain items. It is standalone and does not connect to COLAs Online.
 
-- **Local Tesseract:** operation does not require cloud OCR, an LLM, credentials, or runtime internet access.
-- **Deterministic rules:** normalized values and preserved evidence make each result repeatable and explainable.
-- **Explicit uncertainty:** `review` and `not_found` avoid turning weak OCR or incomplete image evidence into false confidence.
-- **Request-scoped processing:** label bytes go to Tesseract over standard input and are not persisted by the application.
-- **One production container:** the compiled UI, API, Tesseract, and English language data deploy together.
+## Result meanings
 
-## Supported verification
+- **Match:** image-derived evidence supports the entered application value or checked requirement.
+- **Review:** evidence is plausible, but OCR or image uncertainty prevents a confident automated conclusion. This is intentional conservative behavior, not necessarily an error.
+- **Mismatch:** reliable evidence indicates a substantive discrepancy.
+- **Not found:** the system could not locate reliable supporting label evidence.
+- **Not applicable:** the check does not apply to the submitted application context.
 
-- Brand name; class/type designation; numeric ABV; metric net contents.
+## What it checks
+
+- Brand name, class/type designation, numeric ABV, and supported metric or U.S. fluid-volume forms.
 - Producer/bottler name and address.
-- Country of origin when the reviewer identifies the application as imported; domestic origin is `not_applicable`.
-- Government Health Warning presence, prescribed wording, heading capitalization, and conservative image evidence for weight, continuity, separation, and contrast.
-- The applicable warning type-size and characters-per-inch tiers, with physical confirmation left to the reviewer when scale is unavailable.
+- Country of origin when the reviewer marks the application as imported.
+- Government Health Warning text and available image-based presentation evidence.
 
-## What is intentionally not automated
+Physical type size and characters per inch still require reviewer confirmation because an ordinary raster image has no trustworthy physical scale. The prototype does not implement a comprehensive beverage-regulation engine, batch processing, authentication, persistence, or final regulatory decisions.
 
-- Final legal or regulatory approval.
-- Physical type-size or characters-per-inch proof from an unscaled raster image.
-- A comprehensive beverage-specific applicability or regulation engine.
-- Batch upload, authentication, persistence, COLAs Online integration, and external/cloud AI.
-
-## Architecture
+## How it works
 
 ```text
-Image + Application Data
-  → Validation → Preprocessing → Tesseract OCR (once)
-  → Structured Extraction → Deterministic Comparison + Warning Analysis
-  → Reviewer Results
+Label image + expected application data
+  → Validation and selective preprocessing/upscaling
+  → Full-image Tesseract TSV OCR (PSM 11)
+  → Spatial panel reconstruction and warning localization
+  → Up to three conditional regional OCR refinements
+  → Deterministic extraction, normalization, and comparison
+  → Explained reviewer results and preserved OCR evidence
 ```
+
+FastAPI and Pydantic provide the API and typed results; React, TypeScript, and Vite provide the reviewer interface. Tesseract runs locally. Difficult brand, class/type, or net-contents regions can receive bounded PSM 6/7 crop refinement, while the full-image result remains the layout and warning evidence. No cloud OCR or LLM is required.
+
+Uploaded images are request-scoped and are not persisted by the application. No database is required, and the production container runs as a non-root user. These are implementation choices, not a general security certification.
+
+## Repository layout
 
 ```text
 frontend/           React + TypeScript + Vite; Vitest and ESLint
@@ -53,7 +62,7 @@ Dockerfile          Development targets and single-container production build
 docker-compose.yml  Frontend/backend development services with hot reload
 ```
 
-Vite proxies `/api` to FastAPI during development. In production, FastAPI serves the compiled React files and the API from one container. Local Tesseract runs behind the replaceable OCR protocol. There is no database, authentication, COLAs Online integration, batch processing, or external AI API dependency.
+Vite proxies `/api` to FastAPI during development. In production, FastAPI serves the compiled React files and API from one container.
 
 See [requirements](docs/requirements.md) and [architecture](docs/architecture.md) for scope, sources, request flow, assumptions, and tradeoffs.
 
@@ -64,7 +73,7 @@ See [requirements](docs/requirements.md) and [architecture](docs/architecture.md
 - Tesseract OCR with English language data, available as `tesseract` on `PATH`. The Docker image installs it automatically.
 - Docker with Compose v2, only for the container instructions.
 
-Dependency installation and image builds need network access. Once built, this scaffold needs no outbound network access. Direct dependency versions, frontend transitive dependencies, Python constraints, and container image versions are pinned.
+Dependency installation and image builds need network access. Once built, the application needs no outbound network access. Direct dependency versions, frontend transitive dependencies, Python constraints, and container image versions are pinned.
 
 ## Local setup
 
@@ -142,35 +151,19 @@ Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor p
 
 ### Verification endpoint and workflow
 
-`POST /api/labels/verify` accepts one `file` plus multipart fields `brand_name`, `class_type`, `abv`, `net_contents`, `producer_name`, `producer_address`, and the boolean `imported_product`. `country_origin` is required only when `imported_product` is true. It reuses the OCR upload and preprocessing pipeline. Every request begins with one full-image TSV pass; only uncertain brand/class candidates or a missing volume with a defensible nearby region can trigger targeted crop OCR. At most three crop calls are allowed, so a request uses one to four Tesseract invocations. The raw `/ocr` endpoint remains one invocation. The verification response contains expected values, preserved candidates, normalized values, a result for each field, explanations, raw OCR text, engine and duration metadata, warnings, Government Warning analysis, total OCR-call count, and secondary crop-refinement evidence.
+`POST /api/labels/verify` accepts one image plus the expected application fields. Country of origin is required only when the reviewer marks the product as imported. Each request starts with one full-image TSV pass; uncertain brand/class candidates or a missing volume with suitable geometry can trigger up to three crop OCR calls. The raw `/api/labels/ocr` endpoint remains a single pass.
 
-- `match`: normalized values are deterministically equivalent.
-- `review`: OCR damage or multiple plausible values make the result uncertain.
-- `mismatch`: a reliable detected value differs from the application value.
-- `not_found`: no reliable candidate was extracted; this is a field result, not an HTTP failure.
-- `not_applicable`: the country-of-origin check was explicitly skipped for a domestic application; it does not degrade the overall summary.
-
-Brand and class/type comparison ignores capitalization, harmless punctuation, whitespace, Unicode presentation differences, and straight-versus-curly apostrophes. Conservative approximate text similarity can produce `review`, never `match`. ABV is compared as a percentage number without fuzzy matching. Metric volume plus the label-relevant U.S. pint and fluid-ounce forms are converted to milliliters using exact definitions: one U.S. fluid ounce is 29.5735295625 mL and one U.S. pint is 473.176473 mL. Thus `1 L` and `1000 mL`, or `1 PINT` and `16 FL OZ`, compare equivalently. Other imperial units are not silently converted. Multiple distinct percentages or volumes require review even if one equals the expected value.
-
-Extraction is deliberately deterministic and conservative. It reconstructs spatial lines and lightweight panels from Tesseract TSV words before selecting candidates, so side-by-side front, back, and warning panels are not treated as one flattened reading stream. Brand ranking considers line prominence, panel position, compactness, confidence, repetition, and spatially coherent multiline artwork. Class/type joins require nearby, aligned lines in the same panel; an `IPA` cue can preserve a nearby OCR-damaged type line for review. The localized Government Warning region is excluded from generic product-field extraction. Explicit patterns handle ABV and supported volume units. The extractor does not infer proof, accept incompatible volume units, use an exhaustive beverage taxonomy, or manufacture values when text is uncertain. Results assist reviewers and do not constitute approval, rejection, or a legal-compliance determination.
-
-Targeted refinement crops the already-preprocessed, request-scoped pixels using TSV candidate geometry and slightly expanded margins, then applies local autocontrast and light sharpening. Short display blocks use Tesseract PSM 6; coherent class/type and compact volume lines use PSM 7. Each crop has a one-second timeout. Refinement is retained only when its own OCR confidence is adequate and comparison evidence becomes stronger; the expected application value is never inserted into or used to rewrite OCR output. Full-image candidates, refined text, confidence, selected/not-selected state, PSM, duration, and crop bounds remain available as secondary evidence. The Government Warning continues to use only the full-image pass.
-
-Producer extraction recognizes a small set of role cues such as `Bottled by`, `Distilled and bottled by`, `Produced by`, and `Imported by`. It supports same-line company/city/state blocks as well as multiline cue, company, and location layouts. Nearby address candidates must belong to the same spatial panel; several similarly plausible addresses require review. Address comparison ignores case and punctuation and normalizes U.S. state names to abbreviations; partial addresses require review, while distinct cities or states remain mismatches. This is not postal validation or geocoding. Origin extraction recognizes conservative phrases such as `Product of`, `Produced in`, `Imported from`, and `Made in`. Import applicability always comes from the application toggle, never an OCR guess; multiple distinct statements, ambiguous wording, or unfamiliar wording remains review or not found.
+Comparison is deterministic and field-specific: harmless text presentation differences are normalized, ABV is compared numerically, and supported metric/U.S. fluid volumes are normalized to milliliters. Ambiguous or missing evidence is preserved for review instead of guessed. The response includes explanations, raw OCR, warning analysis, timing, call count, and secondary refinement evidence. See [architecture.md](docs/architecture.md) for extraction rules and tradeoffs.
 
 ### Government Health Warning analysis
 
 The prescribed statement and presentation rules come from [27 CFR 16.21](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.21), [27 CFR 16.22](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.22), and [current TTB warning guidance](https://www.ttb.gov/regulated-commodities/beverage-alcohol/beer/labeling/malt-beverage-health-warning). The application reports separate results for presence, wording, heading capitalization, heading boldness, non-bold body text, continuity, separation, contrast/legibility, type size, and characters per inch.
 
-- Wording is compared deterministically with only Unicode, whitespace, line-wrap, and substantively equivalent typography normalization. Bounded token differences are evaluated using prescribed-clause structure, edit shape, and localized TSV confidence. Likely OCR character, punctuation, or token-fragmentation damage produces `review`, never `match`; confidently missing, changed, or reordered prescribed language remains `mismatch`.
-- Capitalization uses the original OCR representation. Plain OCR text does not prove boldness.
-- Warning location is derived from Tesseract words, hierarchy, confidence, and bounding boxes. The pixel crop is request-scoped and is not persisted.
-- Bold/non-bold evidence uses a conservative within-warning comparison of glyph stroke index and ink density. Similar weights, small text, missing coordinates, or weak image evidence return `review`.
-- Continuity and separation use clause order, OCR block/paragraph relationships, unexpected interruptions, bounding boxes, and surrounding whitespace. Normal line wrapping is allowed.
-- Contrast uses local luminance separation, background variation, and OCR quality. It is an estimate, not a legal legibility determination; gradients, artwork, glare, or uncertain evidence return `review`.
-- For containers up to 237 mL, over 237 mL through 3 L, and over 3 L, the reported minimum type sizes are respectively 1, 2, and 3 mm; maximum characters per inch are respectively 40, 25, and 12. Ordinary raster pixels do not establish physical millimeters or inches, so both actual-measurement checks remain `review` without a trustworthy physical scale.
+- **Deterministic text checks:** warning presence, prescribed wording, and heading capitalization use OCR text and localized TSV confidence. Likely OCR damage produces `review`; reliable substantive differences can produce `mismatch`.
+- **Image-based evidence:** heading/body weight, continuity, separation, and contrast use OCR geometry and request-scoped pixels. Weak, distorted, or ambiguous evidence remains `review`.
+- **Manual physical confirmation:** the applicable minimum type-size and maximum-characters-per-inch tiers are reported, but actual dimensions remain `review` because raster pixels do not establish millimeters or inches.
 
-TTB has itself noted that submitted images can distort size, CPI, and contrast evidence; see [TTB Industry Circular 2011-04](https://www.ttb.gov/public-information/industry-circulars/archives/2011/11-04). The prototype therefore favors explicit manual review over false visual certainty.
+These results support reviewer inspection; they are not regulatory approval or a legal-compliance determination. Detailed rules and limitations are documented in [architecture.md](docs/architecture.md).
 
 ### Run the frontend
 
@@ -231,18 +224,10 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The production bundle omits
 
 ## Performance
 
-On the Linux development host, the 18-case generated corpus completed all 306 expected status checks correctly with no OCR failures. It includes product-left/warning-right and warning-left/product-right artwork whose raw Tesseract order interleaves the two panels. Representative stage latency in milliseconds was:
+- **Synthetic regression:** 18 generated cases completed all 306 expected status checks without an OCR failure. Median total time was about 0.5 seconds.
+- **Real-label regression:** six TTB sample fixtures had a median total under one second; the slowest completed in about 1.2 seconds with the bounded maximum of four OCR calls.
 
-| Stage | Median | p90 | Slowest |
-| --- | ---: | ---: | ---: |
-| Preprocessing | 121 | 129 | 162 |
-| Tesseract OCR | 232 | 250 | 253 |
-| Extraction, comparison, and warning analysis | 96 | 99 | 99 |
-| Total case processing | 502 | 521 | 764 |
-
-These synthetic-label results are a reproducible deterministic regression baseline. Their exact status accuracy is not an estimate of accuracy, precision, or recall on real submitted labels, and the timing is not a promise for every photograph or host. They are comfortably below the stakeholder's approximately five-second ordinary-use target on the measured environment.
-
-The six repository real-label examples produced 32 application-field matches, 1 review, 4 not-found results, 5 not-applicable results, no field mismatches, and no false confident matches in the measured targeted-refinement run. Median OCR calls per case were 1.5 and the maximum was 4. All six Government Warning results remained `review`; targeted crops are not used for warning analysis. Median cumulative OCR time was approximately 442 ms, median total time approximately 957 ms, and the slowest case approximately 1.20 seconds. Six TTB sample images are regression evidence, not an accuracy benchmark or a general real-world accuracy estimate.
+These are repeatable regression measurements from one Linux development host, not production accuracy or latency benchmarks. Generated and real-label results are intentionally reported separately.
 
 ## Docker
 
@@ -278,7 +263,12 @@ The container supports raw OCR, complete common-field application-data verificat
 
 ## Limitations and tradeoffs
 
-Deterministic cues are intentionally conservative. Unusual layouts, curved or reflective containers, stylized type, glare, and poor photographs may yield `review` or `not_found`. The generated evaluation corpus covers several layouts and a mildly degraded image but is not representative of every production label. Image-based warning checks provide evidence, not measurements of physical artwork. English is the only bundled OCR language.
+- Stylized or decorative text, unusual layouts, glare, low resolution, and photographed containers can require manual review.
+- Raster images cannot conclusively establish physical type dimensions.
+- Responsible-party information is not inferred without sufficient label evidence.
+- English is the only bundled OCR language.
+- The prototype is standalone and is not integrated with COLAs Online.
+- Generated and sample fixtures are regression evidence, not production-accuracy estimates.
 
 ## Submission status
 
