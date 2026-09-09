@@ -1,19 +1,19 @@
 # Requirements
 
-The [instruction repository][spec], including its stakeholder interviews, is the product specification. The foundation and a single-label raw OCR slice are implemented. Application-data comparison and compliance decisions remain future work. Priorities reflect the requested sequencing, not additional regulatory rules.
+The [instruction repository][spec], including its stakeholder interviews, is the product specification. The foundation, single-label OCR, and deterministic verification of brand, class/type, ABV, and net contents are implemented. Government Warning validation and regulatory decisions remain future work. Priorities reflect the requested sequencing, not additional regulatory rules.
 
 `User` means the accompanying first-task request. Linked stakeholder names refer to the authoritative interviews. The implementation and acceptance columns are engineering proposals for meeting those requirements; they are not additional stakeholder mandates.
 
 ## Core MVP
 
-### Implemented foundation and raw OCR slice
+### Implemented foundation and verification slices
 
 | Requirement | Source / stakeholder | Priority | Planned implementation | Acceptance criterion |
 | --- | --- | --- | --- | --- |
 | Required stack and monorepo | User | Now | React, TypeScript, Vite frontend; Python, FastAPI backend; separate `frontend/`, `backend/`, and `docs/` | Both applications start locally; pytest and Vitest are configured. |
 | Backend foundation | User | Now | Typed `/api/health`, structured configuration, explicit development CORS, centralized errors, logging, organized modules | `GET /api/health` returns HTTP 200 and `{"status":"ok","service":"ttb-label-verification"}`; backend tests pass. |
 | Replaceable local OCR | User; [Marcus][marcus] | Implemented | Run local Tesseract behind the typed OCR protocol; no hosted OCR or LLM API | The provider receives an in-memory normalized image and returns raw text, engine, duration, and warnings. |
-| Clear, accessible application shell | User | Implemented | “TTB Label Verification” title, application placeholder, functional upload, raw result area, restrained professional styling | Semantic landmarks, labeled file control, keyboard operation, loading announcement, focused errors, readable contrast, and clearly identified unfinished comparison. |
+| Clear, accessible verification workflow | User; [Sarah][sarah] | Implemented | Application fields, single-image upload, one primary verify action, field results, secondary raw evidence | Semantic landmarks, labeled controls, keyboard operation, loading announcement, focused errors, readable contrast, and text status labels. |
 | Frontend/backend connection | User | Now | Frontend requests `/api/health`; show backend availability in development | Development reports success and handles an unavailable backend; production omits the diagnostic indicator. |
 | Single-label image upload | User | Implemented | `POST /api/labels/ocr` accepts exactly one multipart image | PNG, JPEG, and WebP images produce a typed raw OCR response; missing or multiple files are rejected. |
 | Defensive image validation | User | Implemented | Bound upload bytes and decoded dimensions; verify declared MIME against Pillow-detected format | Oversized, unsupported, mismatched, corrupt, animated, empty, and excessive-dimension images return typed errors without entering OCR. |
@@ -27,16 +27,16 @@ The [instruction repository][spec], including its stakeholder interviews, is the
 
 | Requirement | Source / stakeholder | Priority | Planned implementation | Acceptance criterion |
 | --- | --- | --- | --- | --- |
-| Compare application data with one label | [Sarah][sarah]; User | Core | Future upload, extraction, comparison | Results identify matches and discrepancies. |
-| Beverage-dependent fields: brand, class/type, alcohol, net contents, producer/bottler name/address; imported origin | [Label requirements][fields] | Core | Future conditional validation | Required fields follow documented beverage/import applicability; alcohol exceptions remain explicit. |
+| Compare core application data with one label | [Sarah][sarah]; User | Implemented | Typed multipart verification endpoint; one OCR invocation; separate deterministic extraction, normalization, and comparison layers | Brand, class/type, ABV, and net contents return `match`, `review`, `mismatch`, or `not_found` with evidence and explanations. |
+| Beverage-dependent fields: producer/bottler name/address; imported origin | [Label requirements][fields] | Future | Future conditional validation | Required fields follow documented beverage/import applicability; exceptions remain explicit. |
 | Exact health warning; uppercase, bold `GOVERNMENT WARNING:` | [Jenny][jenny]; [Label requirements][fields] | Core | Future text and visual checks | Confirmed omissions or wording/style violations are flagged; uncertain evidence requires review. |
-| Case-only brand differences are acceptable | [Dave][dave] | Core | Future field-specific normalization | Capitalization alone causes no mismatch. |
-| Approximately five-second normal verification | [Sarah][sarah]; User | Core | Future latency measurement | Record end-to-end timings, fixture set and hardware; representative normal labels meet the target. |
-| Obvious workflow across technical abilities | [Sarah][sarah] | Core | Future simple form and results | Primary actions are easy to locate. |
-| Explainable, deterministic compliance decisions | User | Core | Separate comparison rules from extraction; show observed/expected values and reasons | Reviewers can understand each decision; an LLM does not decide exact requirements. |
+| Case-only brand differences are acceptable | [Dave][dave] | Implemented | Field-specific Unicode, case, whitespace, punctuation, and apostrophe normalization | Capitalization alone causes no mismatch. |
+| Approximately five-second normal verification | [Sarah][sarah]; User | Core | Report OCR and total verification durations; retain a five-second OCR timeout | Measure representative real labels and hardware before making a general performance claim. |
+| Obvious workflow across technical abilities | [Sarah][sarah] | Implemented | Four visible steps with one `Verify Label` action | Primary action and results are easy to locate. |
+| Explainable, deterministic verification results | User | Implemented | Separate comparison rules from extraction; show expected/observed values, evidence, status, and reason | Reviewers can understand each result; an LLM does not decide requirements. |
 | Standalone, minimal document retention | User; [Marcus][marcus] | Core | Request-scoped processing; no database or COLAs integration | Uploads are not unnecessarily persisted; core operation needs no COLAs connection. |
 
-No complete regulatory rule set, canonical warning text, numeric tolerances, font-size threshold, image limits or confidence cutoff is specified here. Confirm and cite applicable requirements before implementing them. **Plain OCR text cannot establish bold styling. Unknown style or extraction evidence requires review, not a claimed compliance pass.** These are implementation gaps, not claims that verification already exists.
+No complete regulatory rule set, canonical warning text, numeric tolerance, font-size threshold, or confidence cutoff is specified here. Core ABV and volume comparisons therefore use exact normalized numeric equality. Confirm and cite applicable requirements before adding regulatory rules. **Plain OCR text cannot establish bold styling. Unknown style or extraction evidence requires review, not a claimed compliance pass.**
 
 ## Important enhancement
 
@@ -53,7 +53,7 @@ The interview's 200–300-application deliveries describe workload context, not 
 | Difficult photographs | [Jenny][jenny] | Optional, deferred | Explore angle, lighting and glare handling | Evaluate representative difficult images. |
 | Accessible deployed prototype | [Deliverables][deliverables] | Later delivery | Deploy completed core | Reviewers receive a working URL. |
 | Authentication, database, COLAs integration, Kubernetes, microservices and LLM API | User | Excluded from this task | Do not implement | No such components or dependencies are introduced. |
-| Application-data entry, field comparison, and verification | User | Beyond this slice | Implement incrementally after raw OCR | The application placeholder is replaced only when comparisons work and have been verified. |
+| Government Warning wording and typography | User | Beyond this slice | Implement as a later evidence-based vertical slice | Text and visual uncertainty remain distinct and never imply a final regulatory decision. |
 
 [spec]: https://github.com/treasurytakehome-rgb/instructions
 [sarah]: https://github.com/treasurytakehome-rgb/instructions#interview-notes-sarah-chen-deputy-director-of-label-compliance

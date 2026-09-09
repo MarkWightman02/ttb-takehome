@@ -1,8 +1,8 @@
 # TTB Label Verification
 
-A standalone prototype for extracting text from alcohol-label artwork and, in a later slice, comparing it with application data. The [take-home specification](https://github.com/treasurytakehome-rgb/instructions), including its stakeholder interviews, defines the intended product.
+A standalone prototype for extracting text from alcohol-label artwork and comparing core fields with expected application data. The [take-home specification](https://github.com/treasurytakehome-rgb/instructions), including its stakeholder interviews, defines the intended product.
 
-**Current status: single-label OCR slice.** The React UI accepts one PNG, JPEG, or WebP label image, previews it, sends it to FastAPI for validation and conservative preprocessing, and displays raw text from local Tesseract OCR. Application-data entry, field comparison, and regulatory decisions are not implemented. No AI credentials are required.
+**Current status: single-label application-data verification.** The React UI accepts expected brand, class/type, ABV, and net contents plus one PNG, JPEG, or WebP label image. One primary action runs local OCR once, extracts deterministic candidates, and displays explainable field-level results. Raw OCR remains available as supporting evidence. Government Warning checks and final regulatory decisions are not implemented. No AI credentials are required.
 
 ## Architecture
 
@@ -72,7 +72,7 @@ Verify the local OCR runtime before starting the API:
 tesseract --version
 ```
 
-If Tesseract is installed outside `PATH`, set `TTB_TESSERACT_COMMAND` in `.env` to its executable path. This development machine did not have Tesseract installed during the recorded verification; API and UI tests use dependency injection and do not fake a successful production OCR result.
+If Tesseract is installed outside `PATH`, set `TTB_TESSERACT_COMMAND` in `.env` to its executable path. Normal unit tests inject an OCR provider; the conditional real-engine tests execute preprocessing and the installed Tesseract binary when it is available.
 
 ### Run the backend
 
@@ -101,6 +101,19 @@ API documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Hea
 - Output: raw text, engine identifier, total and OCR processing duration, original image metadata, and useful warnings. Raw text is not a compliance decision.
 
 Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor photographs can reduce accuracy. This slice uses English Tesseract with page-segmentation mode 6 and does not report word-level confidence or label typography such as boldness.
+
+### Verification endpoint and workflow
+
+`POST /api/labels/verify` accepts one `file` plus multipart text fields `brand_name`, `class_type`, `abv`, and `net_contents`. It reuses the OCR upload and preprocessing pipeline and invokes OCR exactly once per request. The response contains the expected values, preserved extraction candidates, normalized values, a result for each field, plain-language explanations, raw OCR text, engine and duration metadata, and warnings.
+
+- `match`: normalized values are deterministically equivalent.
+- `review`: OCR damage or multiple plausible values make the result uncertain.
+- `mismatch`: a reliable detected value differs from the application value.
+- `not_found`: no reliable candidate was extracted; this is a field result, not an HTTP failure.
+
+Brand and class/type comparison ignores capitalization, harmless punctuation, whitespace, Unicode presentation differences, and straight-versus-curly apostrophes. Conservative approximate text similarity can produce `review`, never `match`. ABV is compared as a percentage number without fuzzy matching. Metric net contents are converted to milliliters, so `1 L` and `1000 mL` match. Multiple distinct percentages or volumes require review even if one equals the expected value.
+
+Extraction is deliberately deterministic and conservative. It uses explicit ABV/metric-volume patterns, a small generic set of beverage cues for class/type candidates, and filtered early OCR lines for brand candidates. It does not infer proof, accept incompatible volume units, use an exhaustive beverage taxonomy, or manufacture values when text is uncertain. Results assist reviewers and do not constitute approval, rejection, or a legal-compliance determination.
 
 ### Run the frontend
 
@@ -173,8 +186,8 @@ docker compose run --rm backend python -m pytest -c backend/pyproject.toml backe
 docker compose run --rm frontend pnpm test
 ```
 
-This OCR slice does not yet fulfill the specification's application-comparison or final deployed-prototype deliverables.
+The container supports both raw OCR and application-data verification. A hosted reviewer URL and additional regulatory checks remain future deliverables.
 
 ## Next increment
 
-Add the application-data form and deterministic field-level comparison for one label, beginning with brand name and alcohol content. Preserve raw OCR evidence in each explanation, handle uncertainty explicitly, and measure the full workflow against the approximately five-second target. Confirm applicable TTB rules before encoding regulatory checks. Batch processing and difficult-photo enhancement follow a reliable single-label workflow.
+Add Government Warning wording verification as a separate, evidence-based vertical slice. Keep typography/boldness unknown unless reliable visual evidence exists, preserve manual-review outcomes for uncertain OCR, and confirm applicable TTB sources before encoding the rule. Batch processing and difficult-photo enhancement should remain later work.

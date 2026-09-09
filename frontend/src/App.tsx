@@ -19,39 +19,21 @@ export default function App() {
           <p className="eyebrow">Single-label review</p>
           <h1>TTB Label Verification</h1>
           <p className="lede">
-            Upload one alcohol label image and extract its text using local OCR.
+            Compare four application fields with text extracted from one alcohol
+            label image.
           </p>
         </div>
 
         <aside className="prototype-note" aria-labelledby="preview-title">
-          <h2 id="preview-title">OCR preview</h2>
+          <h2 id="preview-title">Reviewer decision support</h2>
           <p>
-            Image upload and raw text extraction are available. Application data
-            entry and compliance verification are not implemented yet.
+            Results identify matches, differences, and uncertain evidence for
+            manual review. They do not approve, reject, or determine legal
+            compliance.
           </p>
         </aside>
 
-        <ol className="review-steps" aria-label="Label OCR workflow">
-          <li>
-            <section className="step-card" aria-labelledby="application-title">
-              <div className="step-heading">
-                <span className="step-number" aria-hidden="true">
-                  1
-                </span>
-                <h2 id="application-title">Application data</h2>
-                <span className="planned-label">Planned</span>
-              </div>
-              <p>
-                Enter the brand name, alcohol content and other details from the
-                application for comparison with the label.
-              </p>
-              <div className="placeholder">
-                <p>Application-data form coming next</p>
-              </div>
-            </section>
-          </li>
-          <LabelOcrWorkflow />
-        </ol>
+        <LabelOcrWorkflow />
       </main>
 
       <footer className="page-width site-footer">

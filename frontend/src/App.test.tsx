@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import App from './App';
 
 describe('application shell', () => {
-  it('shows the OCR workflow while clearly deferring application comparison', () => {
+  it('shows the four-step decision-support verification workflow', () => {
     vi.stubEnv('DEV', false);
     render(<App />);
 
@@ -13,18 +13,18 @@ describe('application shell', () => {
     expect(
       screen.getByRole('region', { name: 'Application data' }),
     ).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Label image' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Verify label' })).toBeVisible();
     expect(
-      screen.getByRole('region', { name: 'Upload label image' }),
+      screen.getByRole('region', { name: 'Verification results' }),
     ).toBeVisible();
+    expect(screen.getByText(/do not approve, reject/i)).toBeVisible();
     expect(
-      screen.getByRole('region', { name: 'Extracted label text' }),
+      screen.getByText('No verification has been performed.'),
     ).toBeVisible();
-    expect(
-      screen.getByText(/image upload and raw text extraction are available/i),
-    ).toBeVisible();
-    expect(screen.getByText('No label text has been extracted.')).toBeVisible();
-    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Label image')).toHaveAttribute(
+    expect(screen.getAllByRole('textbox')).toHaveLength(3);
+    expect(screen.getByRole('spinbutton')).toBeVisible();
+    expect(screen.getByLabelText('Choose label image')).toHaveAttribute(
       'accept',
       'image/png,image/jpeg,image/webp',
     );
