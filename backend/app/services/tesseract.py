@@ -13,6 +13,7 @@ from app.services.ocr import (
     OcrProcessingError,
     OcrResult,
     OcrUnavailableError,
+    RegionalPageSegmentationMode,
     TextRegion,
 )
 
@@ -29,6 +30,29 @@ class TesseractOcrService:
 
     async def extract(self, image: bytes, *, media_type: str) -> OcrResult:
         del media_type  # The pipeline always supplies a decoded, normalized PNG.
+        return await self._extract(image, page_segmentation_mode=11)
+
+    async def extract_region(
+        self,
+        image: bytes,
+        *,
+        media_type: str,
+        page_segmentation_mode: RegionalPageSegmentationMode,
+    ) -> OcrResult:
+        del media_type
+        return await self._extract(
+            image,
+            page_segmentation_mode=page_segmentation_mode,
+            timeout_seconds=min(self.timeout_seconds, 1.0),
+        )
+
+    async def _extract(
+        self,
+        image: bytes,
+        *,
+        page_segmentation_mode: RegionalPageSegmentationMode,
+        timeout_seconds: float | None = None,
+    ) -> OcrResult:
         with Image.open(BytesIO(image)) as prepared:
             width, height = prepared.size
 
@@ -41,7 +65,7 @@ class TesseractOcrService:
                 "-l",
                 self.language,
                 "--psm",
-                "11",
+                str(page_segmentation_mode),
                 "tsv",
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
@@ -52,7 +76,8 @@ class TesseractOcrService:
 
         try:
             stdout, _stderr = await asyncio.wait_for(
-                process.communicate(image), timeout=self.timeout_seconds
+                process.communicate(image),
+                timeout=timeout_seconds or self.timeout_seconds,
             )
         except TimeoutError as exc:
             process.kill()

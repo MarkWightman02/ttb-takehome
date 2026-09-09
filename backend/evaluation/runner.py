@@ -12,6 +12,7 @@ from app.services.government_warning import analyze_government_warning
 from app.services.image_preprocessing import prepare_image
 from app.services.normalization import normalize_volume
 from app.services.ocr import BoundingBox
+from app.services.ocr_refinement import refine_ocr_candidates
 from app.services.structured_extraction import extract_candidates
 from app.services.tesseract import TesseractOcrService
 from evaluation.corpus import EvaluationCase, evaluation_cases, render_case
@@ -40,6 +41,8 @@ async def run_evaluation(
     exact_checks = 0
     failures = 0
     empty_ocr = 0
+    ocr_invocations = 0
+    ocr_calls_per_case: list[float] = []
 
     for case in selected_cases:
         case_started = perf_counter()
@@ -52,6 +55,7 @@ async def run_evaluation(
                 settings=settings,
             )
             preprocessing_ms = (perf_counter() - preprocessing_started) * 1_000
+            ocr_invocations += 1
             ocr = await service.extract(prepared.data, media_type="image/png")
             analysis_started = perf_counter()
             warning = analyze_government_warning(
@@ -69,8 +73,21 @@ async def run_evaluation(
                         height=warning.bounding_box.height,
                     ),
                 )
-            candidates = extract_candidates(ocr, excluded_regions=warning_regions)
-            results = compare_application_data(case.application, candidates)
+            initial_candidates = extract_candidates(ocr, excluded_regions=warning_regions)
+            initial_results = compare_application_data(case.application, initial_candidates)
+            refinement = await refine_ocr_candidates(
+                ocr_service=service,
+                preprocessed_image=prepared.data,
+                full_ocr=ocr,
+                expected=case.application,
+                candidates=initial_candidates,
+                results=initial_results,
+                excluded_regions=warning_regions,
+            )
+            results = refinement.results
+            case_ocr_calls = 1 + refinement.invocation_count
+            ocr_invocations += refinement.invocation_count
+            ocr_calls_per_case.append(case_ocr_calls)
             analysis_ms = (perf_counter() - analysis_started) * 1_000
             total_ms = (perf_counter() - case_started) * 1_000
             if not ocr.text:
@@ -96,7 +113,9 @@ async def run_evaluation(
                     missed_matches += 1
 
             latencies["preprocessing_ms"].append(preprocessing_ms)
-            latencies["ocr_ms"].append(ocr.duration_ms)
+            latencies["full_image_ocr_ms"].append(ocr.duration_ms)
+            latencies["refinement_ms"].append(refinement.duration_ms)
+            latencies["ocr_ms"].append(ocr.duration_ms + refinement.duration_ms)
             latencies["analysis_ms"].append(analysis_ms)
             latencies["total_ms"].append(total_ms)
             case_reports.append(
@@ -105,10 +124,16 @@ async def run_evaluation(
                     "beverage_style": case.beverage_style,
                     "degradation": case.degradation,
                     "ocr_text": ocr.text,
+                    "ocr_invocation_count": case_ocr_calls,
+                    "ocr_refinements": [
+                        item.model_dump(mode="json") for item in refinement.evidence
+                    ],
                     "differences": differences,
                     "latency_ms": {
                         "preprocessing": round(preprocessing_ms, 3),
-                        "ocr": round(ocr.duration_ms, 3),
+                        "full_image_ocr": round(ocr.duration_ms, 3),
+                        "refinement": round(refinement.duration_ms, 3),
+                        "ocr": round(ocr.duration_ms + refinement.duration_ms, 3),
                         "analysis": round(analysis_ms, 3),
                         "total": round(total_ms, 3),
                     },
@@ -129,6 +154,8 @@ async def run_evaluation(
     total_expectations = sum(len(case.expected) for case in selected_cases)
     return {
         "total_cases": len(selected_cases),
+        "ocr_invocations": ocr_invocations,
+        "ocr_calls_per_case": _latency_summary(ocr_calls_per_case),
         "total_expectations": total_expectations,
         "exact_status_checks": exact_checks,
         "status_accuracy": round(exact_checks / total_expectations, 4) if total_expectations else 0,

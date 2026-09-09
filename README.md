@@ -142,7 +142,7 @@ Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor p
 
 ### Verification endpoint and workflow
 
-`POST /api/labels/verify` accepts one `file` plus multipart fields `brand_name`, `class_type`, `abv`, `net_contents`, `producer_name`, `producer_address`, and the boolean `imported_product`. `country_origin` is required only when `imported_product` is true. It reuses the OCR upload and preprocessing pipeline and invokes OCR exactly once per request. The response contains expected values, preserved candidates, normalized values, a result for each field, explanations, raw OCR text, engine and duration metadata, warnings, and Government Warning analysis.
+`POST /api/labels/verify` accepts one `file` plus multipart fields `brand_name`, `class_type`, `abv`, `net_contents`, `producer_name`, `producer_address`, and the boolean `imported_product`. `country_origin` is required only when `imported_product` is true. It reuses the OCR upload and preprocessing pipeline. Every request begins with one full-image TSV pass; only uncertain brand/class candidates or a missing volume with a defensible nearby region can trigger targeted crop OCR. At most three crop calls are allowed, so a request uses one to four Tesseract invocations. The raw `/ocr` endpoint remains one invocation. The verification response contains expected values, preserved candidates, normalized values, a result for each field, explanations, raw OCR text, engine and duration metadata, warnings, Government Warning analysis, total OCR-call count, and secondary crop-refinement evidence.
 
 - `match`: normalized values are deterministically equivalent.
 - `review`: OCR damage or multiple plausible values make the result uncertain.
@@ -153,6 +153,8 @@ Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor p
 Brand and class/type comparison ignores capitalization, harmless punctuation, whitespace, Unicode presentation differences, and straight-versus-curly apostrophes. Conservative approximate text similarity can produce `review`, never `match`. ABV is compared as a percentage number without fuzzy matching. Metric volume plus the label-relevant U.S. pint and fluid-ounce forms are converted to milliliters using exact definitions: one U.S. fluid ounce is 29.5735295625 mL and one U.S. pint is 473.176473 mL. Thus `1 L` and `1000 mL`, or `1 PINT` and `16 FL OZ`, compare equivalently. Other imperial units are not silently converted. Multiple distinct percentages or volumes require review even if one equals the expected value.
 
 Extraction is deliberately deterministic and conservative. It reconstructs spatial lines and lightweight panels from Tesseract TSV words before selecting candidates, so side-by-side front, back, and warning panels are not treated as one flattened reading stream. Brand ranking considers line prominence, panel position, compactness, confidence, repetition, and spatially coherent multiline artwork. Class/type joins require nearby, aligned lines in the same panel; an `IPA` cue can preserve a nearby OCR-damaged type line for review. The localized Government Warning region is excluded from generic product-field extraction. Explicit patterns handle ABV and supported volume units. The extractor does not infer proof, accept incompatible volume units, use an exhaustive beverage taxonomy, or manufacture values when text is uncertain. Results assist reviewers and do not constitute approval, rejection, or a legal-compliance determination.
+
+Targeted refinement crops the already-preprocessed, request-scoped pixels using TSV candidate geometry and slightly expanded margins, then applies local autocontrast and light sharpening. Short display blocks use Tesseract PSM 6; coherent class/type and compact volume lines use PSM 7. Each crop has a one-second timeout. Refinement is retained only when its own OCR confidence is adequate and comparison evidence becomes stronger; the expected application value is never inserted into or used to rewrite OCR output. Full-image candidates, refined text, confidence, selected/not-selected state, PSM, duration, and crop bounds remain available as secondary evidence. The Government Warning continues to use only the full-image pass.
 
 Producer extraction recognizes a small set of role cues such as `Bottled by`, `Distilled and bottled by`, `Produced by`, and `Imported by`. It supports same-line company/city/state blocks as well as multiline cue, company, and location layouts. Nearby address candidates must belong to the same spatial panel; several similarly plausible addresses require review. Address comparison ignores case and punctuation and normalizes U.S. state names to abbreviations; partial addresses require review, while distinct cities or states remain mismatches. This is not postal validation or geocoding. Origin extraction recognizes conservative phrases such as `Product of`, `Produced in`, `Imported from`, and `Made in`. Import applicability always comes from the application toggle, never an OCR guess; multiple distinct statements, ambiguous wording, or unfamiliar wording remains review or not found.
 
@@ -215,7 +217,7 @@ Run the separate repository real-label regression set:
 python backend/scripts/evaluate_real_labels.py
 ```
 
-The real-label runner discovers matching PNG/JPEG/WebP image and JSON stems under `examples/`, decodes the actual image format, and runs preprocessing, one real Tesseract TSV invocation, spatial reconstruction, warning exclusion, extraction, and comparison. `--json` includes raw OCR, expected data, candidates, every field and warning result, and per-case latency. Real-label counts are intentionally reported separately from the generated corpus.
+The real-label runner discovers matching PNG/JPEG/WebP image and JSON stems under `examples/`, decodes the actual image format, and runs the production flow: preprocessing, one full-image Tesseract TSV invocation, spatial reconstruction, warning exclusion, conditional bounded crop refinement, extraction, and comparison. `--json` includes raw full-image OCR, initial and final candidates/results, crop OCR evidence, call counts, every field and warning result, and per-case latency. Real-label counts are intentionally reported separately from the generated corpus.
 
 `pnpm build` writes `frontend/dist`. For a local production-serving check, set `TTB_FRONTEND_DIST` to that directory's absolute path and start FastAPI. For example, in PowerShell from the root:
 
@@ -233,14 +235,14 @@ On the Linux development host, the 18-case generated corpus completed all 306 ex
 
 | Stage | Median | p90 | Slowest |
 | --- | ---: | ---: | ---: |
-| Preprocessing | 122 | 127 | 163 |
-| Tesseract OCR | 233 | 249 | 259 |
-| Extraction, comparison, and warning analysis | 96 | 99 | 100 |
-| Total case processing | 510 | 523 | 768 |
+| Preprocessing | 121 | 129 | 162 |
+| Tesseract OCR | 232 | 250 | 253 |
+| Extraction, comparison, and warning analysis | 96 | 99 | 99 |
+| Total case processing | 502 | 521 | 764 |
 
 These synthetic-label results are a reproducible deterministic regression baseline. Their exact status accuracy is not an estimate of accuracy, precision, or recall on real submitted labels, and the timing is not a promise for every photograph or host. They are comfortably below the stakeholder's approximately five-second ordinary-use target on the measured environment.
 
-The six repository real-label examples produced 28 application-field matches, 4 reviews, 5 not-found results, 5 not-applicable results, no field mismatches, and no false confident matches in the measured run. All six Government Warning results required review after OCR uncertainty was separated from substantive mismatch. Median OCR time was approximately 401 ms and median total time approximately 886 ms. Six TTB sample images are regression evidence, not an accuracy benchmark or a general real-world accuracy estimate.
+The six repository real-label examples produced 32 application-field matches, 1 review, 4 not-found results, 5 not-applicable results, no field mismatches, and no false confident matches in the measured targeted-refinement run. Median OCR calls per case were 1.5 and the maximum was 4. All six Government Warning results remained `review`; targeted crops are not used for warning analysis. Median cumulative OCR time was approximately 442 ms, median total time approximately 957 ms, and the slowest case approximately 1.20 seconds. Six TTB sample images are regression evidence, not an accuracy benchmark or a general real-world accuracy estimate.
 
 ## Docker
 

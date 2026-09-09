@@ -6,7 +6,7 @@ from PIL import Image
 from app.core.config import Settings
 from app.main import create_app
 from app.services.government_warning_rules import PRESCRIBED_GOVERNMENT_WARNING
-from app.services.ocr import OcrProcessingError, OcrResult
+from app.services.ocr import BoundingBox, OcrProcessingError, OcrResult, TextRegion
 
 
 def png_bytes() -> bytes:
@@ -32,6 +32,66 @@ class CountingOcrService:
             engine_name="test-ocr",
             duration_ms=10,
         )
+
+
+def ocr_with_spatial_lines(text: str, *, confidence: float = 0.95) -> OcrResult:
+    regions: list[TextRegion] = []
+    for line_id, value in enumerate(text.splitlines(), 1):
+        left = 40
+        for word_id, token in enumerate(value.split(), 1):
+            width = max(20, len(token) * 12)
+            regions.append(
+                TextRegion(
+                    text=token,
+                    bounding_box=BoundingBox(
+                        left=left,
+                        top=line_id * 65,
+                        width=width,
+                        height=42 if line_id == 1 else 28,
+                    ),
+                    confidence=confidence,
+                    page_id=1,
+                    block_id=1,
+                    paragraph_id=1,
+                    line_id=line_id,
+                    word_id=word_id,
+                )
+            )
+            left += width + 10
+    return OcrResult(
+        text=text,
+        regions=tuple(regions),
+        image_width=1600,
+        image_height=800,
+        engine_name="test-ocr",
+        duration_ms=10,
+    )
+
+
+class CountingRegionalOcrService:
+    def __init__(self) -> None:
+        self.full_calls = 0
+        self.regional_calls = 0
+
+    async def extract(self, image: bytes, *, media_type: str) -> OcrResult:
+        del image, media_type
+        self.full_calls += 1
+        return ocr_with_spatial_lines(
+            "OLD T0M DISTILLERY\nKentucky Straight Bourbon Whiskey\n45% ABV\n750 mL\n"
+            "BOTTLED BY OLD TOM DISTILLERY LLC\nLOUISVILLE, KY\n" + PRESCRIBED_GOVERNMENT_WARNING
+        )
+
+    async def extract_region(
+        self,
+        image: bytes,
+        *,
+        media_type: str,
+        page_segmentation_mode: int,
+    ) -> OcrResult:
+        del image, media_type
+        assert page_segmentation_mode == 6
+        self.regional_calls += 1
+        return ocr_with_spatial_lines("OLD TOM DISTILLERY")
 
 
 def verify(client: TestClient, **overrides: str):
@@ -80,6 +140,25 @@ def test_all_fields_match_and_ocr_runs_exactly_once(settings: Settings):
     assert warning["checks"]["heading_capitalization"]["status"] == "match"
     assert warning["checks"]["heading_boldness"]["status"] == "review"
     assert warning["checks"]["type_size"]["measurements"]["required_minimum_mm"] == 2
+
+
+def test_verify_reports_bounded_selected_regional_ocr_evidence(settings: Settings):
+    service = CountingRegionalOcrService()
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = verify(client)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert service.full_calls == 1
+    assert service.regional_calls == 1
+    assert payload["ocr_invocation_count"] == 2
+    assert payload["refinement_duration_ms"] == 10
+    assert payload["results"]["brand_name"]["status"] == "match"
+    assert payload["government_warning"]["checks"]["wording"]["status"] == "match"
+    assert len(payload["ocr_refinements"]) == 1
+    assert payload["ocr_refinements"][0]["field"] == "brand_name"
+    assert payload["ocr_refinements"][0]["selected"] is True
+    assert payload["ocr_refinements"][0]["refined_text"] == "OLD TOM DISTILLERY"
 
 
 def test_mixed_results_and_candidate_evidence(settings: Settings):

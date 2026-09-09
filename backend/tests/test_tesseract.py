@@ -87,6 +87,50 @@ def test_tesseract_timeout_terminates_process_and_returns_processing_error(monke
     assert invocation[invocation.index("--psm") + 1] == "11"
 
 
+def test_regional_tesseract_uses_requested_psm_and_short_timeout(monkeypatch):
+    output = BytesIO()
+    Image.new("L", (20, 20), "white").save(output, format="PNG")
+    invocation: tuple[object, ...] = ()
+    observed_timeout = 0.0
+    tsv = (
+        b"level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\t"
+        b"width\theight\tconf\ttext\n"
+        b"5\t1\t1\t1\t1\t1\t0\t0\t10\t10\t95\tABC\n"
+    )
+
+    class CompletedProcess:
+        returncode = 0
+
+        async def communicate(self, image: bytes):
+            del image
+            return tsv, b""
+
+    async def create_process(*args, **kwargs):
+        nonlocal invocation
+        invocation = args
+        del kwargs
+        return CompletedProcess()
+
+    original_wait_for = asyncio.wait_for
+
+    async def observe_timeout(awaitable, timeout):
+        nonlocal observed_timeout
+        observed_timeout = timeout
+        return await original_wait_for(awaitable, timeout)
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", create_process)
+    monkeypatch.setattr(asyncio, "wait_for", observe_timeout)
+    service = TesseractOcrService(command="tesseract", language="eng", timeout_seconds=8)
+
+    result = asyncio.run(
+        service.extract_region(output.getvalue(), media_type="image/png", page_segmentation_mode=7)
+    )
+
+    assert result.text == "ABC"
+    assert invocation[invocation.index("--psm") + 1] == "7"
+    assert observed_timeout == 1
+
+
 @pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed")
 def test_real_tesseract_extracts_generated_label_text():
     image = Image.new("L", (1400, 300), "white")

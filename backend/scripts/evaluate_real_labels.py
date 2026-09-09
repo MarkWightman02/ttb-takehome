@@ -47,6 +47,12 @@ def _print_summary(report: dict[str, object]) -> None:
         f"OCR failures: {report['ocr_failures']} | "
         f"processing failures: {report['processing_failures']}"
     )
+    calls = report["ocr_calls_per_case"]
+    assert isinstance(calls, dict)
+    print(
+        f"OCR calls/case: median {calls['median']:.1f} | "
+        f"p90 {calls['p90']:.1f} | max {calls['slowest']:.0f}"
+    )
     print("Field statuses: " + " | ".join(f"{name}: {value}" for name, value in counts.items()))
     print(
         f"False confident matches: {report['false_confident_matches']} | "
@@ -72,11 +78,21 @@ def _print_summary(report: dict[str, object]) -> None:
             continue
         results = case["results"]
         assert isinstance(results, dict)
+        initial = case["initial_results"]
+        assert isinstance(initial, dict)
         fields = ", ".join(
-            f"{field}={result['status']} ({result.get('extracted_raw') or 'none'})"
+            (
+                f"{field}={initial[field]['status']}→{result['status']} "
+                f"({result.get('extracted_raw') or 'none'})"
+            )
             for field, result in results.items()
         )
-        print(f"- {case['name']}: {fields}")
+        print(f"- {case['name']} ({case['ocr_invocation_count']} OCR calls): {fields}")
+        for refinement in case["ocr_refinements"]:
+            print(
+                f"  refine {refinement['field']} psm={refinement['page_segmentation_mode']} "
+                f"selected={refinement['selected']}: {refinement['refined_text']!r}"
+            )
 
 
 if __name__ == "__main__":

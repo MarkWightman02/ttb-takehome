@@ -67,6 +67,28 @@ def test_extracts_us_fluid_volume(line: str, expected_ml: float):
     assert candidate.source_line == line
 
 
+def test_compound_imperial_volume_prefers_explicit_parenthetical_metric_value():
+    line = "1 PINT 0.9 FL OZ (500 ML)"
+
+    candidates = extract_candidates(line).net_contents
+
+    assert len(candidates) == 1
+    assert candidates[0].raw_value == line
+    assert candidates[0].normalized_ml == 500
+    assert candidates[0].source_line == line
+
+
+def test_internally_inconsistent_compound_volume_preserves_both_values():
+    line = "1 PINT 0.9 FL OZ (750 ML)"
+
+    candidates = extract_candidates(line).net_contents
+
+    assert len(candidates) == 2
+    assert candidates[0].normalized_ml == pytest.approx(499.79265)
+    assert candidates[1].normalized_ml == 750
+    assert all(candidate.source_line == line for candidate in candidates)
+
+
 def test_preserves_multiple_volume_candidates():
     candidates = extract_candidates("750 mL\n375 mL").net_contents
     assert [candidate.normalized_ml for candidate in candidates] == [750.0, 375.0]
@@ -88,6 +110,14 @@ def test_brand_and_class_candidates_use_filtered_lines():
     assert [candidate.raw_value for candidate in candidates.class_type] == [
         "Kentucky Straight Bourbon Whiskey"
     ]
+
+
+def test_class_candidate_trims_trailing_trademark_noise_but_preserves_source():
+    candidate = extract_candidates("India Pale Ale o®").class_type[0]
+
+    assert candidate.raw_value == "India Pale Ale"
+    assert candidate.normalized_value == "india pale ale"
+    assert candidate.source_line == "India Pale Ale o®"
 
 
 def test_government_warning_body_is_not_a_brand_candidate():

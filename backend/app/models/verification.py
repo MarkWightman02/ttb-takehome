@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, model_validator
 from app.models.ocr import OcrImageMetadata
 
 VerificationStatus = Literal["match", "review", "mismatch", "not_found", "not_applicable"]
+RefinementField = Literal["brand_name", "class_type", "net_contents"]
 FieldName = Literal[
     "brand_name",
     "class_type",
@@ -133,6 +134,26 @@ class GovernmentWarningAnalysis(BaseModel):
     checks: GovernmentWarningChecks
 
 
+class RefinementBoundingBox(BaseModel):
+    left: int = Field(ge=0)
+    top: int = Field(ge=0)
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    coordinate_space: Literal["preprocessed_image"] = "preprocessed_image"
+
+
+class OcrRefinementEvidence(BaseModel):
+    field: RefinementField
+    trigger: str
+    full_image_candidates: list[str] = Field(default_factory=list)
+    refined_text: str
+    selected: bool
+    page_segmentation_mode: Literal[6, 7]
+    mean_confidence: float | None = Field(default=None, ge=0, le=1)
+    duration_ms: float = Field(ge=0)
+    crop: RefinementBoundingBox
+
+
 class LabelVerificationResponse(BaseModel):
     expected: ApplicationData
     candidates: ExtractedCandidates
@@ -143,5 +164,8 @@ class LabelVerificationResponse(BaseModel):
     engine: str
     total_verification_duration_ms: float = Field(ge=0)
     ocr_duration_ms: float = Field(ge=0)
+    refinement_duration_ms: float = Field(ge=0)
+    ocr_invocation_count: int = Field(ge=1, le=4)
+    ocr_refinements: list[OcrRefinementEvidence] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     image: OcrImageMetadata

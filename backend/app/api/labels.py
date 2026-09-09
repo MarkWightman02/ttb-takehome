@@ -21,6 +21,7 @@ from app.services.ocr import (
     OcrService,
     OcrUnavailableError,
 )
+from app.services.ocr_refinement import refine_ocr_candidates
 from app.services.structured_extraction import extract_candidates
 
 logger = logging.getLogger(__name__)
@@ -149,6 +150,17 @@ async def verify_label(
         excluded_regions=warning_regions,
     )
     results = compare_application_data(expected, candidates)
+    refinement = await refine_ocr_candidates(
+        ocr_service=get_ocr_service(request),
+        preprocessed_image=processed.prepared.data,
+        full_ocr=processed.ocr_result,
+        expected=expected,
+        candidates=candidates,
+        results=results,
+        excluded_regions=warning_regions,
+    )
+    candidates = refinement.candidates
+    results = refinement.results
     prepared = processed.prepared
     return LabelVerificationResponse(
         expected=expected,
@@ -159,8 +171,11 @@ async def verify_label(
         raw_text=processed.ocr_result.text,
         engine=processed.ocr_result.engine_name,
         total_verification_duration_ms=(perf_counter() - started) * 1_000,
-        ocr_duration_ms=processed.ocr_result.duration_ms,
-        warnings=processed.warnings,
+        ocr_duration_ms=processed.ocr_result.duration_ms + refinement.duration_ms,
+        refinement_duration_ms=refinement.duration_ms,
+        ocr_invocation_count=1 + refinement.invocation_count,
+        ocr_refinements=list(refinement.evidence),
+        warnings=list(dict.fromkeys((*processed.warnings, *refinement.warnings))),
         image=OcrImageMetadata(
             width=prepared.original_width,
             height=prepared.original_height,

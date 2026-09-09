@@ -18,6 +18,7 @@ from app.services.government_warning import analyze_government_warning
 from app.services.image_preprocessing import FORMAT_MEDIA_TYPES, prepare_image
 from app.services.normalization import normalize_volume
 from app.services.ocr import BoundingBox
+from app.services.ocr_refinement import refine_ocr_candidates
 from app.services.structured_extraction import extract_candidates
 from app.services.tesseract import TesseractOcrService
 
@@ -73,7 +74,7 @@ def discover_real_label_cases(examples_dir: Path) -> tuple[RealLabelCase, ...]:
 
 
 async def run_real_label_evaluation(examples_dir: Path) -> dict[str, Any]:
-    """Run each discovered real fixture through one real Tesseract invocation."""
+    """Run each real fixture through full-image OCR and bounded refinement."""
 
     cases = discover_real_label_cases(examples_dir)
     command = shutil.which("tesseract")
@@ -94,6 +95,7 @@ async def run_real_label_evaluation(examples_dir: Path) -> dict[str, Any]:
     ocr_failures = 0
     processing_failures = 0
     ocr_invocations = 0
+    ocr_calls_per_case: list[float] = []
 
     for case in cases:
         started = perf_counter()
@@ -128,8 +130,22 @@ async def run_real_label_evaluation(examples_dir: Path) -> dict[str, Any]:
                         height=warning.bounding_box.height,
                     ),
                 )
-            candidates = extract_candidates(ocr, excluded_regions=excluded_regions)
-            results = compare_application_data(case.application, candidates)
+            initial_candidates = extract_candidates(ocr, excluded_regions=excluded_regions)
+            initial_results = compare_application_data(case.application, initial_candidates)
+            refinement = await refine_ocr_candidates(
+                ocr_service=service,
+                preprocessed_image=prepared.data,
+                full_ocr=ocr,
+                expected=case.application,
+                candidates=initial_candidates,
+                results=initial_results,
+                excluded_regions=excluded_regions,
+            )
+            candidates = refinement.candidates
+            results = refinement.results
+            ocr_invocations += refinement.invocation_count
+            case_ocr_calls = 1 + refinement.invocation_count
+            ocr_calls_per_case.append(case_ocr_calls)
             analysis_ms = (perf_counter() - analysis_started) * 1_000
             total_ms = (perf_counter() - started) * 1_000
 
@@ -144,7 +160,9 @@ async def run_real_label_evaluation(examples_dir: Path) -> dict[str, Any]:
                 warning_status_counts[getattr(warning.checks, check).status] += 1
 
             latencies["preprocessing_ms"].append(preprocessing_ms)
-            latencies["ocr_ms"].append(ocr.duration_ms)
+            latencies["full_image_ocr_ms"].append(ocr.duration_ms)
+            latencies["refinement_ms"].append(refinement.duration_ms)
+            latencies["ocr_ms"].append(ocr.duration_ms + refinement.duration_ms)
             latencies["analysis_ms"].append(analysis_ms)
             latencies["total_ms"].append(total_ms)
             reports.append(
@@ -158,13 +176,25 @@ async def run_real_label_evaluation(examples_dir: Path) -> dict[str, Any]:
                     ),
                     "expected": case.application.model_dump(mode="json"),
                     "ocr_text": ocr.text,
+                    "initial_candidates": initial_candidates.model_dump(mode="json"),
+                    "initial_results": initial_results.model_dump(mode="json"),
                     "candidates": candidates.model_dump(mode="json"),
                     "results": results.model_dump(mode="json"),
+                    "ocr_invocation_count": case_ocr_calls,
+                    "ocr_refinements": [
+                        item.model_dump(mode="json") for item in refinement.evidence
+                    ],
                     "government_warning": warning.model_dump(mode="json"),
-                    "warnings": [*prepared.warnings, *ocr.warnings],
+                    "warnings": [
+                        *prepared.warnings,
+                        *ocr.warnings,
+                        *refinement.warnings,
+                    ],
                     "latency_ms": {
                         "preprocessing": round(preprocessing_ms, 3),
-                        "ocr": round(ocr.duration_ms, 3),
+                        "full_image_ocr": round(ocr.duration_ms, 3),
+                        "refinement": round(refinement.duration_ms, 3),
+                        "ocr": round(ocr.duration_ms + refinement.duration_ms, 3),
                         "analysis": round(analysis_ms, 3),
                         "total": round(total_ms, 3),
                     },
@@ -189,6 +219,7 @@ async def run_real_label_evaluation(examples_dir: Path) -> dict[str, Any]:
     return {
         "total_cases": len(cases),
         "ocr_invocations": ocr_invocations,
+        "ocr_calls_per_case": _latency_summary(ocr_calls_per_case),
         "field_status_counts": {status: status_counts[status] for status in STATUSES},
         "warning_status_counts": {status: warning_status_counts[status] for status in STATUSES},
         "false_confident_matches": false_confident_matches,

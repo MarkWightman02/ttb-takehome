@@ -43,6 +43,13 @@ VOLUME_PATTERN = re.compile(
     r"pints?|pt|fl\.?\s*oz\.?|fluid\s+ounces?)(?!\w)",
     re.IGNORECASE,
 )
+COMPOUND_VOLUME_PATTERN = re.compile(
+    rf"(?<![\w.])(?P<pints>{VOLUME_NUMBER})\s*(?:pints?|pt)\s+"
+    rf"(?P<ounces>{VOLUME_NUMBER})\s*(?:fl\.?\s*oz\.?|fluid\s+ounces?)\s*"
+    rf"\(\s*(?P<metric>{VOLUME_NUMBER})\s*"
+    r"(?P<metric_unit>ml|(?-i:mI)|millilit(?:er|re)s?|l|lit(?:er|re)s?)\s*\)",
+    re.IGNORECASE,
+)
 CLASS_TYPE_CUES = re.compile(
     r"\b(?:whisk(?:e)?y|bourbon|vodka|gin|rum|tequila|mezcal|brandy|"
     r"ale|lager|beer|stout|porter|cider|wine|sauvignon|chardonnay|"
@@ -50,6 +57,7 @@ CLASS_TYPE_CUES = re.compile(
     re.IGNORECASE,
 )
 CLASS_ACRONYM_CUES = re.compile(r"\bipa\b", re.IGNORECASE)
+TRAILING_DECORATIVE_MARK = re.compile(r"\s+\S*[©®™]\S*\s*$")
 EXCLUDED_BRAND_PHRASES = re.compile(
     r"\b(?:government\s+warning|alcohol\s+by\s+volume|alc\.?\s*/?\s*vol|"
     r"contains\s+sulfites|bottled\s+by|produced\s+by|distilled\s+by|"
@@ -283,28 +291,73 @@ def _extract_abv_candidates(lines: list[OcrLine]) -> list[AbvCandidate]:
 def _extract_volume_candidates(lines: list[OcrLine]) -> list[VolumeCandidate]:
     candidates: list[VolumeCandidate] = []
     for line in lines:
+        compound_spans: list[tuple[int, int]] = []
+        for match in COMPOUND_VOLUME_PATTERN.finditer(line.text):
+            metric_amount = float(match.group("metric"))
+            if metric_amount <= 0:
+                continue
+            compound_spans.append(match.span())
+            metric_ml = _volume_to_ml(metric_amount, match.group("metric_unit"))
+            imperial_ml = float(match.group("pints")) * float(MILLILITERS_PER_US_PINT) + float(
+                match.group("ounces")
+            ) * float(MILLILITERS_PER_US_FLUID_OUNCE)
+            if abs(metric_ml - imperial_ml) <= max(1, metric_ml * 0.01):
+                candidates.append(
+                    VolumeCandidate(
+                        raw_value=match.group(0).strip(),
+                        normalized_ml=metric_ml,
+                        source_line=line.text,
+                        line_number=line.sequence_number,
+                    )
+                )
+            else:
+                candidates.extend(
+                    (
+                        VolumeCandidate(
+                            raw_value=(
+                                f"{match.group('pints')} PINT {match.group('ounces')} FL OZ"
+                            ),
+                            normalized_ml=imperial_ml,
+                            source_line=line.text,
+                            line_number=line.sequence_number,
+                        ),
+                        VolumeCandidate(
+                            raw_value=f"{match.group('metric')} {match.group('metric_unit')}",
+                            normalized_ml=metric_ml,
+                            source_line=line.text,
+                            line_number=line.sequence_number,
+                        ),
+                    )
+                )
         for match in VOLUME_PATTERN.finditer(line.text):
+            if any(
+                match.start() < compound_end and match.end() > compound_start
+                for compound_start, compound_end in compound_spans
+            ):
+                continue
             amount = float(match.group("value"))
             if amount <= 0:
                 continue
-            unit = match.group("unit").casefold()
-            if unit == "l" or unit.startswith("lit"):
-                normalized_ml = amount * 1000
-            elif unit.startswith("pint") or unit == "pt":
-                normalized_ml = amount * float(MILLILITERS_PER_US_PINT)
-            elif unit.startswith("fl") or unit.startswith("fluid"):
-                normalized_ml = amount * float(MILLILITERS_PER_US_FLUID_OUNCE)
-            else:
-                normalized_ml = amount
             candidates.append(
                 VolumeCandidate(
                     raw_value=match.group(0).strip(),
-                    normalized_ml=normalized_ml,
+                    normalized_ml=_volume_to_ml(amount, match.group("unit")),
                     source_line=line.text,
                     line_number=line.sequence_number,
                 )
             )
     return candidates
+
+
+def _volume_to_ml(amount: float, unit: str) -> float:
+    normalized_unit = unit.casefold()
+    if normalized_unit == "l" or normalized_unit.startswith("lit"):
+        return amount * 1000
+    if normalized_unit.startswith("pint") or normalized_unit == "pt":
+        return amount * float(MILLILITERS_PER_US_PINT)
+    if normalized_unit.startswith("fl") or normalized_unit.startswith("fluid"):
+        return amount * float(MILLILITERS_PER_US_FLUID_OUNCE)
+    return amount
 
 
 def _extract_class_type_candidates(lines: list[OcrLine]) -> list[TextCandidate]:
@@ -338,18 +391,27 @@ def _extract_class_type_candidates(lines: list[OcrLine]) -> list[TextCandidate]:
             coherent.append(following)
             used.add(next_index)
             next_index += 1
-        raw_value = " ".join(candidate.text for candidate in coherent)
+        source_line = "\n".join(candidate.text for candidate in coherent)
+        raw_value = _trim_trailing_decorative_mark(
+            " ".join(candidate.text for candidate in coherent)
+        )
         normalized = normalize_text(raw_value)
         if normalized:
             candidates.append(
                 TextCandidate(
                     raw_value=raw_value,
                     normalized_value=normalized,
-                    source_line="\n".join(candidate.text for candidate in coherent),
+                    source_line=source_line,
                     line_number=coherent[0].sequence_number,
                 )
             )
     return candidates
+
+
+def _trim_trailing_decorative_mark(value: str) -> str:
+    """Exclude a trailing trademark-like glyph while retaining its source evidence."""
+
+    return TRAILING_DECORATIVE_MARK.sub("", value).strip()
 
 
 def _is_class_line(line: OcrLine) -> bool:

@@ -31,6 +31,12 @@ def _print_summary(report: dict[str, object]) -> None:
         f"exact statuses: {report['exact_status_checks']} "
         f"({float(report['status_accuracy']):.1%})"
     )
+    calls = report["ocr_calls_per_case"]
+    assert isinstance(calls, dict)
+    print(
+        f"OCR invocations: {report['ocr_invocations']} | "
+        f"calls/case median: {calls['median']:.1f} | max: {calls['slowest']:.0f}"
+    )
     print(
         f"False confident matches: {report['false_confident_matches']} | "
         f"false mismatches: {report['false_mismatches']} | "

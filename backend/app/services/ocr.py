@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol, runtime_checkable
 
 
 @dataclass(frozen=True, slots=True)
@@ -52,3 +52,19 @@ class OcrService(Protocol):
     """
 
     async def extract(self, image: bytes, *, media_type: str) -> OcrResult: ...
+
+
+RegionalPageSegmentationMode = Literal[6, 7, 8, 11, 13]
+
+
+@runtime_checkable
+class RegionalOcrService(Protocol):
+    """Optional capability for bounded OCR refinement of an already-selected crop."""
+
+    async def extract_region(
+        self,
+        image: bytes,
+        *,
+        media_type: str,
+        page_segmentation_mode: RegionalPageSegmentationMode,
+    ) -> OcrResult: ...
