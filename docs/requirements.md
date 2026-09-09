@@ -55,7 +55,7 @@ The interview's 200–300-application deliveries describe workload context, not 
 | Requirement | Source / stakeholder | Priority | Planned implementation | Acceptance criterion |
 | --- | --- | --- | --- | --- |
 | Difficult photographs | [Jenny][jenny] | Optional, deferred | Explore angle, lighting and glare handling | Evaluate representative difficult images. |
-| Accessible deployed prototype | [Deliverables][deliverables] | Later delivery | Deploy completed core | Reviewers receive a working URL. |
+| Accessible deployed prototype | [Deliverables][deliverables] | Implemented | Deploy the completed core without changing its standalone architecture | Reviewers can use `https://ttb.markwightman.org`; local and Docker paths remain documented. |
 | Authentication, database, COLAs integration, Kubernetes, microservices and LLM API | User | Excluded from this task | Do not implement | No such components or dependencies are introduced. |
 
 [spec]: https://github.com/treasurytakehome-rgb/instructions

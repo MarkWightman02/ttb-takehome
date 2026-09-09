@@ -2,6 +2,7 @@ import math
 import re
 import statistics
 import unicodedata
+from collections import Counter
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from io import BytesIO
@@ -27,6 +28,10 @@ WORD_PATTERN = re.compile(r"[a-z0-9]+", re.IGNORECASE)
 CLAUSE_ONE_MARKER = re.compile(r"\(\s*1\s*\)")
 CLAUSE_TWO_MARKER = re.compile(r"\(\s*2\s*\)")
 COMMON_OCR_CHARACTERS = str.maketrans({"0": "o", "|": "l"})
+CLAUSE_ONE_ANCHOR = ("according", "to", "the", "surgeon", "general")
+CLAUSE_TWO_ANCHOR = ("consumption", "of", "alcoholic", "beverages")
+LOW_CONFIDENCE_DIFFERENCE = 0.75
+MINIMUM_REVIEW_TOKEN_SIMILARITY = 0.85
 
 
 @dataclass(frozen=True, slots=True)
@@ -337,19 +342,21 @@ def _wording_check(localized: LocalizedWarning | None) -> WarningCheck:
 
     observed_tokens = WORD_PATTERN.findall(observed)
     expected_tokens = WORD_PATTERN.findall(expected)
-    if len(observed_tokens) == len(expected_tokens) and all(
-        _ocr_equivalent_word(actual, required)
-        for actual, required in zip(observed_tokens, expected_tokens, strict=True)
-    ):
-        similarity = SequenceMatcher(None, observed, expected).ratio()
+    character_similarity = SequenceMatcher(None, observed, expected).ratio()
+    token_matcher = SequenceMatcher(None, expected_tokens, observed_tokens)
+    token_similarity = token_matcher.ratio()
+    if _reviewable_wording_damage(localized, expected_tokens, observed_tokens, token_matcher):
         return WarningCheck(
             status="review",
-            explanation=_sentence(
-                "The wording has OCR-like character differences and requires",
-                "manual confirmation.",
+            explanation=(
+                "The warning appears substantially consistent with the prescribed wording, "
+                "but OCR uncertainty requires manual review."
             ),
             evidence=evidence,
-            measurements={"text_similarity": round(similarity, 3)},
+            measurements={
+                "text_similarity": round(character_similarity, 3),
+                "token_similarity": round(token_similarity, 3),
+            },
         )
 
     return WarningCheck(
@@ -360,7 +367,8 @@ def _wording_check(localized: LocalizedWarning | None) -> WarningCheck:
         ),
         evidence=evidence,
         measurements={
-            "text_similarity": round(SequenceMatcher(None, observed, expected).ratio(), 3)
+            "text_similarity": round(character_similarity, 3),
+            "token_similarity": round(token_similarity, 3),
         },
     )
 
@@ -493,34 +501,62 @@ def _continuity_check(localized: LocalizedWarning | None) -> WarningCheck:
             "Statement continuity could not be checked because no warning was located."
         )
     normalized = _normalize_warning_text(localized.text)
-    first = CLAUSE_ONE_MARKER.search(normalized)
-    second = CLAUSE_TWO_MARKER.search(normalized)
-    if first is None or second is None:
-        return WarningCheck(
-            status="mismatch",
-            explanation="Both numbered portions were not found in the localized warning statement.",
-            evidence=list(localized.source_lines),
-        )
-    if first.start() > second.start():
-        return WarningCheck(
-            status="mismatch",
-            explanation="The numbered warning portions appear out of the prescribed order.",
-            evidence=list(localized.source_lines),
-        )
     observed_tokens = WORD_PATTERN.findall(normalized)
+    first_anchor = _approximate_sequence_index(observed_tokens, CLAUSE_ONE_ANCHOR)
+    second_anchor = _approximate_sequence_index(observed_tokens, CLAUSE_TWO_ANCHOR)
+    if first_anchor is None or second_anchor is None:
+        return WarningCheck(
+            status="mismatch",
+            explanation=(
+                "Substantial text from one or both prescribed warning clauses was not found."
+            ),
+            evidence=list(localized.source_lines),
+        )
+    if first_anchor > second_anchor:
+        return WarningCheck(
+            status="mismatch",
+            explanation="The prescribed warning clauses appear out of order.",
+            evidence=list(localized.source_lines),
+        )
+    first_marker = CLAUSE_ONE_MARKER.search(normalized)
+    second_marker = CLAUSE_TWO_MARKER.search(normalized)
+    if first_marker is None or second_marker is None:
+        return WarningCheck(
+            status="review",
+            explanation=(
+                "Both prescribed clauses occur in order, but OCR did not preserve both "
+                "numbered markers reliably."
+            ),
+            evidence=list(localized.source_lines),
+        )
     expected_tokens = WORD_PATTERN.findall(_normalize_warning_text(PRESCRIBED_GOVERNMENT_WARNING))
     token_changes = SequenceMatcher(None, expected_tokens, observed_tokens).get_opcodes()
-    inserted_words = sum(
-        observed_end - observed_start
-        for operation, _expected_start, _expected_end, observed_start, observed_end in token_changes
-        if operation == "insert"
+    unrelated_insertions = _unrelated_inserted_token_indexes(
+        expected_tokens, observed_tokens, token_changes
     )
-    if inserted_words:
+    token_confidences = _localized_token_confidences(localized)
+    confident_unrelated = [
+        index
+        for index in unrelated_insertions
+        if index >= len(token_confidences)
+        or token_confidences[index] is None
+        or token_confidences[index] >= LOW_CONFIDENCE_DIFFERENCE
+    ]
+    if confident_unrelated:
         return WarningCheck(
             status="mismatch",
             explanation="Unrelated words appear to interrupt the two numbered warning portions.",
             evidence=list(localized.source_lines),
-            measurements={"unexpected_word_count": inserted_words},
+            measurements={"unexpected_word_count": len(confident_unrelated)},
+        )
+    if unrelated_insertions:
+        return WarningCheck(
+            status="review",
+            explanation=(
+                "Low-confidence OCR fragments occur between otherwise ordered warning clauses."
+            ),
+            evidence=list(localized.source_lines),
+            measurements={"uncertain_word_count": len(unrelated_insertions)},
         )
     if not localized.regions:
         return WarningCheck(
@@ -724,6 +760,124 @@ def _ocr_equivalent_word(observed: str, expected: str) -> bool:
     if observed == expected:
         return True
     return observed.translate(COMMON_OCR_CHARACTERS) == expected
+
+
+def _reviewable_wording_damage(
+    localized: LocalizedWarning,
+    expected_tokens: list[str],
+    observed_tokens: list[str],
+    matcher: SequenceMatcher,
+) -> bool:
+    """Identify bounded OCR corruption without forgiving substantive omissions."""
+
+    if observed_tokens == expected_tokens:
+        # Token identity with punctuation damage is still uncertain rather than an exact match.
+        return True
+    if matcher.ratio() < MINIMUM_REVIEW_TOKEN_SIMILARITY:
+        return False
+
+    confidences = _localized_token_confidences(localized)
+    changed_observed_indexes: set[int] = set()
+    change_groups = 0
+    has_unpaired_change = False
+    all_replacements_look_like_ocr = True
+    deleted_tokens: list[str] = []
+    for (
+        operation,
+        expected_start,
+        expected_end,
+        observed_start,
+        observed_end,
+    ) in matcher.get_opcodes():
+        if operation == "equal":
+            continue
+        change_groups += 1
+        expected_change = expected_tokens[expected_start:expected_end]
+        observed_change = observed_tokens[observed_start:observed_end]
+        changed_observed_indexes.update(range(observed_start, observed_end))
+        if max(len(expected_change), len(observed_change)) > 3:
+            return False
+        if operation != "replace" or len(expected_change) != len(observed_change):
+            has_unpaired_change = True
+            all_replacements_look_like_ocr = False
+            if operation == "delete":
+                deleted_tokens.extend(expected_change)
+            continue
+        for required, actual in zip(expected_change, observed_change, strict=True):
+            if not _plausible_ocr_substitution(actual, required):
+                all_replacements_look_like_ocr = False
+
+    if change_groups == 0:
+        return False
+    expected_counts = Counter(expected_tokens)
+    observed_counts = Counter(observed_tokens)
+    if any(observed_counts[token] < expected_counts[token] for token in deleted_tokens):
+        return False
+    if all_replacements_look_like_ocr and not has_unpaired_change:
+        return True
+
+    low_confidence_change = any(
+        index < len(confidences)
+        and confidences[index] is not None
+        and confidences[index] < LOW_CONFIDENCE_DIFFERENCE
+        for index in changed_observed_indexes
+    )
+    return low_confidence_change
+
+
+def _plausible_ocr_substitution(observed: str, expected: str) -> bool:
+    if _ocr_equivalent_word(observed, expected):
+        return True
+    if expected == "1" and observed in {"3", "7", "l", "i"}:
+        return True
+    if abs(len(observed) - len(expected)) > 2:
+        return False
+    return SequenceMatcher(None, observed, expected).ratio() >= 0.75
+
+
+def _localized_token_confidences(localized: LocalizedWarning) -> list[float | None]:
+    return [region.confidence for region in localized.regions for _token in _tokens(region.text)]
+
+
+def _approximate_sequence_index(tokens: list[str], phrase: tuple[str, ...]) -> int | None:
+    exact = _sequence_index(tokens, list(phrase))
+    if exact is not None:
+        return exact
+    for index in range(len(tokens) - len(phrase) + 1):
+        window = tokens[index : index + len(phrase)]
+        differences = [
+            (observed, expected)
+            for observed, expected in zip(window, phrase, strict=True)
+            if observed != expected
+        ]
+        # One damaged anchor token still preserves enough neighboring prescribed text to
+        # locate the clause. Wording independently decides whether that token is a
+        # reviewable OCR error or a substantive mismatch.
+        if len(differences) == 1:
+            return index
+    return None
+
+
+def _unrelated_inserted_token_indexes(
+    expected_tokens: list[str],
+    observed_tokens: list[str],
+    opcodes: list[tuple[str, int, int, int, int]],
+) -> list[int]:
+    indexes: list[int] = []
+    expected_vocabulary = set(expected_tokens)
+    for operation, _expected_start, _expected_end, observed_start, observed_end in opcodes:
+        if operation != "insert":
+            continue
+        for index in range(observed_start, observed_end):
+            token = observed_tokens[index]
+            if token in expected_vocabulary:
+                continue
+            if any(
+                _plausible_ocr_substitution(token, required) for required in expected_vocabulary
+            ):
+                continue
+            indexes.append(index)
+    return indexes
 
 
 def _word_token(value: str) -> str:

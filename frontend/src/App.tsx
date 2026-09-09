@@ -17,10 +17,12 @@ export default function App() {
       <main id="main-content" className="page-width" tabIndex={-1}>
         <div className="page-intro">
           <p className="eyebrow">Single-label review</p>
-          <h1>TTB Label Verification</h1>
+          <h1>Verify label artwork against application data</h1>
           <p className="lede">
-            Compare application data and review Government Health Warning
-            evidence from one alcohol label image.
+            Enter the values from the COLA application, then upload the
+            submitted label artwork. The tool extracts label information and
+            highlights matches, discrepancies, and items requiring manual
+            review.
           </p>
         </div>
 

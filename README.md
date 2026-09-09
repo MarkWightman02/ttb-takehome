@@ -2,6 +2,10 @@
 
 A standalone prototype for extracting text from alcohol-label artwork and comparing common fields with expected application data. The [take-home specification](https://github.com/treasurytakehome-rgb/instructions), including its stakeholder interviews, defines the intended product.
 
+## Live demo
+
+[https://ttb.markwightman.org](https://ttb.markwightman.org)
+
 ## What it does
 
 The reviewer enters application data, uploads one PNG, JPEG, or WebP label, and selects **Verify Label**. The application runs local OCR once, compares structured label evidence with the supplied values, analyzes the Government Health Warning, and presents field-level results with explanations and optional raw OCR evidence.
@@ -156,7 +160,7 @@ Producer extraction recognizes a small set of role cues such as `Bottled by`, `D
 
 The prescribed statement and presentation rules come from [27 CFR 16.21](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.21), [27 CFR 16.22](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.22), and [current TTB warning guidance](https://www.ttb.gov/regulated-commodities/beverage-alcohol/beer/labeling/malt-beverage-health-warning). The application reports separate results for presence, wording, heading capitalization, heading boldness, non-bold body text, continuity, separation, contrast/legibility, type size, and characters per inch.
 
-- Wording is compared deterministically with only Unicode, whitespace, line-wrap, and substantively equivalent typography normalization. Missing, changed, reordered, or materially punctuated text is not normalized away. Known OCR character damage produces `review`, never `match`.
+- Wording is compared deterministically with only Unicode, whitespace, line-wrap, and substantively equivalent typography normalization. Bounded token differences are evaluated using prescribed-clause structure, edit shape, and localized TSV confidence. Likely OCR character, punctuation, or token-fragmentation damage produces `review`, never `match`; confidently missing, changed, or reordered prescribed language remains `mismatch`.
 - Capitalization uses the original OCR representation. Plain OCR text does not prove boldness.
 - Warning location is derived from Tesseract words, hierarchy, confidence, and bounding boxes. The pixel crop is request-scoped and is not persisted.
 - Bold/non-bold evidence uses a conservative within-warning comparison of glyph stroke index and ink density. Similar weights, small text, missing coordinates, or weak image evidence return `review`.
@@ -236,7 +240,7 @@ On the Linux development host, the 18-case generated corpus completed all 306 ex
 
 These synthetic-label results are a reproducible deterministic regression baseline. Their exact status accuracy is not an estimate of accuracy, precision, or recall on real submitted labels, and the timing is not a promise for every photograph or host. They are comfortably below the stakeholder's approximately five-second ordinary-use target on the measured environment.
 
-The six repository real-label examples produced 28 matches, 4 reviews, 5 not-found results, 5 not-applicable results, no mismatches, and no false confident matches in the measured run. Median OCR time was 401 ms; median total time was 886 ms, p90 and slowest total were both 1,016 ms. Six examples are regression evidence, not an accuracy benchmark or a general real-world accuracy estimate.
+The six repository real-label examples produced 28 application-field matches, 4 reviews, 5 not-found results, 5 not-applicable results, no field mismatches, and no false confident matches in the measured run. All six Government Warning results required review after OCR uncertainty was separated from substantive mismatch. Median OCR time was approximately 401 ms and median total time approximately 886 ms. Six TTB sample images are regression evidence, not an accuracy benchmark or a general real-world accuracy estimate.
 
 ## Docker
 
@@ -268,12 +272,12 @@ docker compose run --rm backend python -m pytest -c backend/pyproject.toml backe
 docker compose run --rm frontend pnpm test
 ```
 
-The container supports raw OCR, complete common-field application-data verification, and warning analysis. A hosted reviewer URL remains a future deliverable.
+The container supports raw OCR, complete common-field application-data verification, and warning analysis. The reviewer deployment is available at [https://ttb.markwightman.org](https://ttb.markwightman.org); local and container instructions remain the reproducible submission path.
 
 ## Limitations and tradeoffs
 
 Deterministic cues are intentionally conservative. Unusual layouts, curved or reflective containers, stylized type, glare, and poor photographs may yield `review` or `not_found`. The generated evaluation corpus covers several layouts and a mildly degraded image but is not representative of every production label. Image-based warning checks provide evidence, not measurements of physical artwork. English is the only bundled OCR language.
 
-## Future work
+## Submission status
 
-Publish a reviewer URL, evaluate representative non-proprietary real-world artwork, then consider batch processing and difficult-photo enhancement. Batch processing is desirable for the stakeholder's workload but is not part of the reliable single-label baseline.
+The scoped single-label prototype is implemented and deployed. Further real-label sampling would improve confidence in deterministic extraction limits, but the generated corpus and six TTB sample fixtures remain deliberately separate and neither is presented as production accuracy evidence.

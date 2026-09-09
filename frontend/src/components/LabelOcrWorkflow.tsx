@@ -481,7 +481,7 @@ export function LabelOcrWorkflow() {
         <li>
           <section className="step-card" aria-labelledby="upload-title">
             <StepHeading number="2" id="upload-title">
-              Label image
+              Submitted label artwork
             </StepHeading>
             <p>
               Choose one PNG, JPEG, or WebP image. It is processed for this
@@ -566,7 +566,7 @@ export function LabelOcrWorkflow() {
         <li className="results-step">
           <section className="step-card" aria-labelledby="results-title">
             <StepHeading number="4" id="results-title">
-              Verification results
+              Review results
             </StepHeading>
             <p>
               These informational results support manual review; they are not a

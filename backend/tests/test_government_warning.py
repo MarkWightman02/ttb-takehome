@@ -78,6 +78,83 @@ def test_likely_ocr_character_damage_requires_review():
     assert result.checks.heading_capitalization.status == "review"
 
 
+def test_numbered_marker_ocr_damage_requires_review_instead_of_mismatch():
+    text = PRESCRIBED_GOVERNMENT_WARNING.replace("(1)", "(3)", 1)
+    result = analyze_government_warning(
+        structured_result(text, confidence_overrides={"(3)": 0.35}),
+        preprocessed_image=blank_png(),
+        container_volume_ml=750,
+    )
+
+    assert result.checks.wording.status == "review"
+    assert result.checks.continuous_statement.status == "review"
+    assert result.overall_status == "review"
+    assert "OCR uncertainty requires manual review" in result.checks.wording.explanation
+
+
+def test_damaged_marker_punctuation_requires_review():
+    text = PRESCRIBED_GOVERNMENT_WARNING.replace("(2)", "2)")
+    result = raw_analysis(text)
+    assert result.checks.wording.status == "review"
+    assert result.checks.continuous_statement.status == "review"
+
+
+def test_one_obvious_ocr_character_substitution_requires_review():
+    text = PRESCRIBED_GOVERNMENT_WARNING.replace("beverages", "beveraqes", 1)
+    assert raw_analysis(text).checks.wording.status == "review"
+
+
+def test_several_low_confidence_substitutions_require_review():
+    text = PRESCRIBED_GOVERNMENT_WARNING.replace("women", "wxxen").replace("machinery", "mxxhinery")
+    result = analyze_government_warning(
+        structured_result(
+            text,
+            confidence_overrides={"wxxen": 0.25, "mxxhinery,": 0.31},
+        ),
+        preprocessed_image=blank_png(),
+        container_volume_ml=750,
+    )
+
+    assert result.checks.wording.status == "review"
+
+
+def test_realistic_fragmented_ocr_warning_requires_review():
+    text = (
+        "GOVERNMENT WARNING: (3) According to the Surgeon General, women should not "
+        "drink alcoholic beverages during pregnancy because of the risk of birth defects. "
+        "(2) Consumption of alcoholic S impairs your bevera to ability drive a car or "
+        "operate machinery, and may cause health problems"
+    )
+    result = analyze_government_warning(
+        structured_result(text, confidence_overrides={"alcoholic": 0.20, "S": 0.62}),
+        preprocessed_image=blank_png(),
+        container_volume_ml=750,
+    )
+
+    assert result.checks.wording.status == "review"
+    assert result.checks.continuous_statement.status == "review"
+    assert result.overall_status == "review"
+
+
+def test_confidently_missing_prescribed_phrase_remains_mismatch():
+    text = PRESCRIBED_GOVERNMENT_WARNING.replace(
+        "during pregnancy because of the risk of birth defects", ""
+    )
+    assert raw_analysis(text).checks.wording.status == "mismatch"
+
+
+def test_missing_prescribed_word_stays_mismatch_despite_other_low_confidence_damage():
+    text = PRESCRIBED_GOVERNMENT_WARNING.replace("health problems", "problems").replace(
+        "women", "wxxen"
+    )
+    result = analyze_government_warning(
+        structured_result(text, confidence_overrides={"wxxen": 0.2}),
+        preprocessed_image=blank_png(),
+        container_volume_ml=750,
+    )
+    assert result.checks.wording.status == "mismatch"
+
+
 def test_warning_not_found_is_not_fabricated():
     result = raw_analysis("OLD TOM DISTILLERY\nKentucky Straight Bourbon Whiskey")
     assert result.overall_status == "not_found"
@@ -107,6 +184,8 @@ def structured_result(
     include_boxes: bool = True,
     unrelated_before: bool = False,
     paragraph_break: bool = False,
+    block_break: bool = False,
+    confidence_overrides: dict[str, float] | None = None,
 ) -> OcrResult:
     words = text.split()
     regions: list[TextRegion] = []
@@ -139,9 +218,9 @@ def structured_result(
                     if include_boxes
                     else None
                 ),
-                confidence=0.94,
+                confidence=(confidence_overrides or {}).get(word, 0.94),
                 page_id=1,
-                block_id=2,
+                block_id=3 if block_break and index > len(words) // 2 else 2,
                 paragraph_id=2 if paragraph_break and index > len(words) // 2 else 1,
                 line_id=line + 1,
                 word_id=column + 1,
@@ -191,6 +270,32 @@ def test_paragraph_break_requires_continuity_review():
         container_volume_ml=750,
     )
     assert result.checks.continuous_statement.status == "review"
+
+
+def test_ocr_block_fragmentation_alone_requires_continuity_review():
+    result = analyze_government_warning(
+        structured_result(block_break=True),
+        preprocessed_image=blank_png(),
+        container_volume_ml=750,
+    )
+    assert result.checks.wording.status == "match"
+    assert result.checks.continuous_statement.status == "review"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        PRESCRIBED_GOVERNMENT_WARNING.replace(f"{GOVERNMENT_WARNING_CLAUSE_ONE} ", ""),
+        PRESCRIBED_GOVERNMENT_WARNING.replace(f" {GOVERNMENT_WARNING_CLAUSE_TWO}", ""),
+    ],
+)
+def test_missing_numbered_clause_remains_continuity_mismatch(text: str):
+    assert raw_analysis(text).checks.continuous_statement.status == "mismatch"
+
+
+def test_reordered_clauses_remain_continuity_mismatch():
+    text = f"GOVERNMENT WARNING: {GOVERNMENT_WARNING_CLAUSE_TWO} {GOVERNMENT_WARNING_CLAUSE_ONE}"
+    assert raw_analysis(text).checks.continuous_statement.status == "mismatch"
 
 
 def test_unrelated_line_interrupting_clauses_is_not_treated_as_continuous():

@@ -126,6 +126,23 @@ def test_warning_text_mismatch_is_a_typed_result(settings: Settings):
     assert service.calls == 1
 
 
+def test_warning_ocr_uncertainty_requires_review_without_mismatch_summary(settings: Settings):
+    service = CountingOcrService(
+        "OLD TOM DISTILLERY\nKentucky Straight Bourbon Whiskey\n45% Alc./Vol.\n750 mL\n"
+        "BOTTLED BY OLD TOM DISTILLERY LLC\nLOUISVILLE, KY\n"
+        + PRESCRIBED_GOVERNMENT_WARNING.replace("(1)", "(3)", 1)
+    )
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = verify(client)
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["government_warning"]["checks"]["wording"]["status"] == "review"
+    assert payload["government_warning"]["overall_status"] == "review"
+    assert payload["overall_summary"] == "One or more label checks require manual review."
+    assert service.calls == 1
+
+
 def test_warning_capitalization_mismatch_is_separate_from_wording(settings: Settings):
     service = CountingOcrService(
         "OLD TOM DISTILLERY\nBourbon Whiskey\n45% ABV\n750 mL\n"

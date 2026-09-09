@@ -8,16 +8,22 @@ describe('application shell', () => {
     render(<App />);
 
     expect(
-      screen.getByRole('heading', { level: 1, name: 'TTB Label Verification' }),
+      screen.getByRole('heading', {
+        level: 1,
+        name: 'Verify label artwork against application data',
+      }),
     ).toBeVisible();
     expect(
       screen.getByRole('region', { name: 'Application data' }),
     ).toBeVisible();
-    expect(screen.getByRole('region', { name: 'Label image' })).toBeVisible();
+    expect(
+      screen.getByRole('region', { name: 'Submitted label artwork' }),
+    ).toBeVisible();
     expect(screen.getByRole('region', { name: 'Verify label' })).toBeVisible();
     expect(
-      screen.getByRole('region', { name: 'Verification results' }),
+      screen.getByRole('region', { name: 'Review results' }),
     ).toBeVisible();
+    expect(screen.getByText(/values from the COLA application/i)).toBeVisible();
     expect(screen.getByText(/do not approve, reject/i)).toBeVisible();
     expect(
       screen.getByText('No verification has been performed.'),
