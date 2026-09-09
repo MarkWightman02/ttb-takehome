@@ -12,9 +12,10 @@ from app.services.comparison import compare_application_data
 from app.services.government_warning import analyze_government_warning
 from app.services.government_warning_rules import PRESCRIBED_GOVERNMENT_WARNING
 from app.services.image_preprocessing import prepare_image
-from app.services.ocr import OcrProcessingError, OcrUnavailableError
+from app.services.ocr import BoundingBox, OcrProcessingError, OcrUnavailableError
 from app.services.structured_extraction import extract_candidates
 from app.services.tesseract import TesseractOcrService, _parse_tsv
+from evaluation.corpus import evaluation_cases, render_case
 
 
 def test_tesseract_tsv_preserves_word_hierarchy_geometry_and_confidence():
@@ -131,7 +132,7 @@ def test_real_verification_pipeline_extracts_generated_application_fields():
     )
 
     ocr_result = asyncio.run(service.extract(prepared.data, media_type="image/png"))
-    candidates = extract_candidates(ocr_result.text)
+    candidates = extract_candidates(ocr_result)
     results = compare_application_data(
         ApplicationData(
             brand_name="Old Tom Distillery",
@@ -217,3 +218,61 @@ def test_real_tesseract_localizes_generated_government_warning():
     assert warning.checks.heading_capitalization.status == "match"
     assert warning.bounding_box is not None
     assert PRESCRIBED_GOVERNMENT_WARNING.startswith("GOVERNMENT WARNING:")
+
+
+@pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed")
+def test_real_tesseract_extracts_two_panel_label_without_warning_contamination():
+    case = next(
+        case for case in evaluation_cases() if case.name == "two_panel_product_left_warning_right"
+    )
+    rendered = render_case(case)
+    prepared = prepare_image(
+        rendered.data,
+        content_type=rendered.media_type,
+        settings=Settings(environment="test"),
+    )
+    service = TesseractOcrService(
+        command=shutil.which("tesseract") or "tesseract",
+        language="eng",
+        timeout_seconds=5,
+    )
+
+    ocr_result = asyncio.run(service.extract(prepared.data, media_type="image/png"))
+    warning = analyze_government_warning(
+        ocr_result,
+        preprocessed_image=prepared.visual_evidence_data,
+        container_volume_ml=200,
+    )
+    assert warning.bounding_box is not None
+    excluded = BoundingBox(
+        left=warning.bounding_box.left,
+        top=warning.bounding_box.top,
+        width=warning.bounding_box.width,
+        height=warning.bounding_box.height,
+    )
+    candidates = extract_candidates(ocr_result, excluded_regions=(excluded,))
+    results = compare_application_data(case.application, candidates)
+
+    assert "12345 IMPORTS IMPORTED BY: 12345 IMPORTS" in ocr_result.text
+    assert [candidate.raw_value for candidate in candidates.brand_name] == ["12345 IMPORTS"]
+    assert [candidate.raw_value for candidate in candidates.class_type] == [
+        "RUM WITH COCONUT LIQUEUR"
+    ]
+    assert [candidate.normalized_percent for candidate in candidates.abv] == [18]
+    assert [candidate.raw_value for candidate in candidates.net_contents] == ["200 ML"]
+    assert [candidate.raw_value for candidate in candidates.producer_name] == ["12345 IMPORTS"]
+    assert [candidate.raw_value for candidate in candidates.producer_address] == ["MIAMI, FL"]
+    assert [candidate.raw_value for candidate in candidates.country_origin] == ["CANADA"]
+    assert {getattr(results, field).status for field in type(results).model_fields} == {"match"}
+    assert all(
+        "surgeon" not in candidate.raw_value.casefold()
+        and "ability to drive" not in candidate.raw_value.casefold()
+        for field in (
+            candidates.brand_name,
+            candidates.class_type,
+            candidates.producer_name,
+            candidates.producer_address,
+            candidates.country_origin,
+        )
+        for candidate in field
+    )

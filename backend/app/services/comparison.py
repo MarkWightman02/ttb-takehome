@@ -24,13 +24,7 @@ def compare_application_data(
     expected: ApplicationData, candidates: ExtractedCandidates
 ) -> VerificationResults:
     return VerificationResults(
-        brand_name=_compare_text(
-            field="brand_name",
-            label="brand name",
-            expected_raw=expected.brand_name,
-            candidates=candidates.brand_name,
-            review_threshold=0.80,
-        ),
+        brand_name=_compare_brand(expected.brand_name, candidates.brand_name),
         class_type=_compare_text(
             field="class_type",
             label="class/type",
@@ -154,6 +148,27 @@ def _compare_text(
         explanation=explanation,
         evidence=evidence,
         similarity_score=round(score, 3),
+    )
+
+
+def _compare_brand(expected_raw: str, candidates: list[TextCandidate]) -> FieldVerificationResult:
+    result = _compare_text(
+        field="brand_name",
+        label="brand name",
+        expected_raw=expected_raw,
+        candidates=candidates,
+        review_threshold=0.80,
+    )
+    if len({candidate.normalized_value for candidate in candidates}) <= 1:
+        return result
+    return result.model_copy(
+        update={
+            "status": "review",
+            "explanation": (
+                "Multiple similarly plausible brand lines were detected; manual review is required."
+            ),
+            "evidence": _unique_evidence(candidates),
+        }
     )
 
 

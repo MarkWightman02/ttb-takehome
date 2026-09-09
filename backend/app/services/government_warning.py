@@ -21,6 +21,7 @@ from app.services.government_warning_rules import (
     physical_warning_requirement,
 )
 from app.services.ocr import BoundingBox, OcrResult, TextRegion
+from app.services.spatial_layout import OcrLine, reconstruct_ocr_lines
 
 WORD_PATTERN = re.compile(r"[a-z0-9]+", re.IGNORECASE)
 CLAUSE_ONE_MARKER = re.compile(r"\(\s*1\s*\)")
@@ -130,37 +131,74 @@ def analyze_government_warning(
 def _localize_warning(ocr_result: OcrResult) -> LocalizedWarning | None:
     regions = tuple(region for region in ocr_result.regions if region.text.strip())
     if regions:
-        localized = _localize_structured(regions)
+        localized = _localize_structured(ocr_result, regions)
         if localized is not None:
             return localized
     return _localize_raw_text(ocr_result.text)
 
 
-def _localize_structured(regions: tuple[TextRegion, ...]) -> LocalizedWarning | None:
-    tokens = [_word_token(region.text) for region in regions]
-    heading_index = next(
-        (
-            index
-            for index in range(len(tokens) - 1)
-            if tokens[index] == "government" and tokens[index + 1] == "warning"
-        ),
-        None,
-    )
-    distinctive_index = _sequence_index(tokens, ["according", "to", "the", "surgeon", "general"])
-    if heading_index is None and distinctive_index is None:
+def _localize_structured(
+    ocr_result: OcrResult, regions: tuple[TextRegion, ...]
+) -> LocalizedWarning | None:
+    lines = reconstruct_ocr_lines(ocr_result)
+    panels: dict[int, list[OcrLine]] = {}
+    for line in lines:
+        panels.setdefault(line.panel_id, []).append(line)
+
+    selected_lines: list[OcrLine] | None = None
+    exact_heading_anchor = False
+    distinctive_anchor = False
+    for panel_lines in panels.values():
+        panel_lines.sort(
+            key=lambda line: (
+                line.top if line.top is not None else 10**9,
+                line.left if line.left is not None else 10**9,
+            )
+        )
+        panel_tokens = [_tokens(line.text) for line in panel_lines]
+        heading_line = next(
+            (
+                index
+                for index, tokens in enumerate(panel_tokens)
+                if _sequence_index(tokens, ["government", "warning"]) is not None
+            ),
+            None,
+        )
+        distinctive_line = next(
+            (
+                index
+                for index, tokens in enumerate(panel_tokens)
+                if _sequence_index(tokens, ["according", "to", "the", "surgeon", "general"])
+                is not None
+            ),
+            None,
+        )
+        if heading_line is None and distinctive_line is None:
+            continue
+        start_line = heading_line if heading_line is not None else max(0, distinctive_line - 1)
+        candidate_lines = _warning_lines_from(panel_lines, start_line)
+        candidate_tokens = [token for line in candidate_lines for token in _tokens(line.text)]
+        has_heading = _sequence_index(candidate_tokens, ["government", "warning"]) is not None
+        has_distinctive = (
+            _sequence_index(candidate_tokens, ["according", "to", "the", "surgeon", "general"])
+            is not None
+        )
+        if selected_lines is None or (has_heading and has_distinctive):
+            selected_lines = candidate_lines
+            exact_heading_anchor = has_heading
+            distinctive_anchor = has_distinctive
+        if has_heading and has_distinctive:
+            break
+
+    if not selected_lines:
         return None
 
-    start = heading_index if heading_index is not None else max(0, distinctive_index - 3)
-    end_candidates: list[int] = []
-    for phrase in (["birth", "defects"], ["health", "problems"]):
-        index = _sequence_index(tokens, phrase, start=start)
-        if index is not None:
-            end_candidates.append(index + len(phrase))
-    end = max(end_candidates, default=min(len(regions), start + 85))
-    end = min(len(regions), max(end, start + 2))
-    selected = regions[start:end]
-    indexes = frozenset(range(start, end))
-    source_lines = _structured_lines(selected)
+    selected = tuple(word for line in selected_lines for word in line.words)
+    original_indexes = {id(region): index for index, region in enumerate(regions)}
+    indexes = frozenset(
+        original_indexes[id(region)] for region in selected if id(region) in original_indexes
+    )
+    source_lines = tuple(line.text for line in selected_lines)
     confidences = [region.confidence for region in selected if region.confidence is not None]
     boxes = [region.bounding_box for region in selected if region.bounding_box is not None]
     return LocalizedWarning(
@@ -170,9 +208,40 @@ def _localize_structured(regions: tuple[TextRegion, ...]) -> LocalizedWarning | 
         source_lines=source_lines,
         bounding_box=_union_boxes(boxes),
         mean_confidence=statistics.fmean(confidences) if confidences else None,
-        exact_heading_anchor=heading_index is not None,
-        distinctive_anchor=distinctive_index is not None,
+        exact_heading_anchor=exact_heading_anchor,
+        distinctive_anchor=distinctive_anchor,
     )
+
+
+def _warning_lines_from(lines: list[OcrLine], start: int) -> list[OcrLine]:
+    selected: list[OcrLine] = []
+    tokens: list[str] = []
+    heights = [
+        line.approximate_line_height
+        for line in lines[start:]
+        if line.approximate_line_height is not None
+    ]
+    typical_height = statistics.median(heights) if heights else 20
+    previous_bottom: int | None = None
+    for line in lines[start : start + 14]:
+        box = line.bounding_box
+        if (
+            selected
+            and box is not None
+            and previous_bottom is not None
+            and box.top - previous_bottom > typical_height * 6
+        ):
+            break
+        selected.append(line)
+        tokens.extend(_tokens(line.text))
+        if box is not None:
+            previous_bottom = box.top + box.height
+        ending = _sequence_index(tokens, ["health", "problems"])
+        if ending is not None:
+            break
+        if len(tokens) >= 100:
+            break
+    return selected
 
 
 def _localize_raw_text(raw_text: str) -> LocalizedWarning | None:
@@ -626,6 +695,10 @@ def _ocr_equivalent_word(observed: str, expected: str) -> bool:
 def _word_token(value: str) -> str:
     words = WORD_PATTERN.findall(value.casefold())
     return words[0] if words else ""
+
+
+def _tokens(value: str) -> list[str]:
+    return WORD_PATTERN.findall(value.casefold())
 
 
 def _sequence_index(tokens: list[str], phrase: list[str], *, start: int = 0) -> int | None:

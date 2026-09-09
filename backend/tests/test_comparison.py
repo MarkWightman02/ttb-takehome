@@ -87,6 +87,16 @@ def test_brand_genuine_mismatch_and_missing_candidate():
     assert compare_application_data(application(), candidates).brand_name.status == "not_found"
 
 
+def test_multiple_similarly_ranked_brand_candidates_require_review():
+    candidates = complete_candidates()
+    candidates.brand_name = [text_candidate("Stone's Throw"), text_candidate("Stone Throw Co")]
+
+    result = compare_application_data(application(), candidates).brand_name
+
+    assert result.status == "review"
+    assert "Multiple similarly plausible" in result.explanation
+
+
 @pytest.mark.parametrize(
     "candidate",
     [

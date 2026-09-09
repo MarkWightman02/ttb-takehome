@@ -148,9 +148,9 @@ Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor p
 
 Brand and class/type comparison ignores capitalization, harmless punctuation, whitespace, Unicode presentation differences, and straight-versus-curly apostrophes. Conservative approximate text similarity can produce `review`, never `match`. ABV is compared as a percentage number without fuzzy matching. Metric net contents are converted to milliliters, so `1 L` and `1000 mL` match. Multiple distinct percentages or volumes require review even if one equals the expected value.
 
-Extraction is deliberately deterministic and conservative. It uses explicit ABV/metric-volume patterns, a small generic set of beverage cues for class/type candidates, and filtered early OCR lines for brand candidates. It does not infer proof, accept incompatible volume units, use an exhaustive beverage taxonomy, or manufacture values when text is uncertain. Results assist reviewers and do not constitute approval, rejection, or a legal-compliance determination.
+Extraction is deliberately deterministic and conservative. It reconstructs spatial lines and lightweight panels from Tesseract TSV words before selecting candidates, so side-by-side front, back, and warning panels are not treated as one flattened reading stream. Brand ranking considers line prominence, panel position, compactness, confidence, and repetition in responsible-entity text. Class/type joins require nearby, aligned lines in the same panel. The localized Government Warning region is excluded from generic product-field extraction. Explicit patterns handle ABV and metric volume. The extractor does not infer proof, accept incompatible volume units, use an exhaustive beverage taxonomy, or manufacture values when text is uncertain. Results assist reviewers and do not constitute approval, rejection, or a legal-compliance determination.
 
-Producer extraction recognizes a small set of role cues such as `Bottled by`, `Produced by`, and `Imported by`, including common multiline name/location layouts. Address comparison ignores case and punctuation and normalizes U.S. state names to abbreviations; partial addresses require review, while distinct cities or states remain mismatches. This is not postal validation or geocoding. Origin extraction recognizes conservative phrases such as `Product of`, `Imported from`, and `Made in`. Import applicability always comes from the application toggle, never an OCR guess; ambiguous or unfamiliar wording remains review or not found.
+Producer extraction recognizes a small set of role cues such as `Bottled by`, `Produced by`, and `Imported by`, including same-line companies and common multiline name/location layouts. Nearby address candidates must belong to the same spatial panel; several similarly plausible addresses require review. Address comparison ignores case and punctuation and normalizes U.S. state names to abbreviations; partial addresses require review, while distinct cities or states remain mismatches. This is not postal validation or geocoding. Origin extraction recognizes conservative phrases such as `Product of`, `Produced in`, `Imported from`, and `Made in`. Import applicability always comes from the application toggle, never an OCR guess; multiple distinct statements, ambiguous wording, or unfamiliar wording remains review or not found.
 
 ### Government Health Warning analysis
 
@@ -217,16 +217,16 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The production bundle omits
 
 ## Performance
 
-On the Linux development host, the 16-case generated corpus completed all 272 expected status checks correctly with no OCR failures. Representative stage latency in milliseconds was:
+On the Linux development host, the 18-case generated corpus completed all 306 expected status checks correctly with no OCR failures. It includes product-left/warning-right and warning-left/product-right artwork whose raw Tesseract order interleaves the two panels. Representative stage latency in milliseconds was:
 
 | Stage | Median | p90 | Slowest |
 | --- | ---: | ---: | ---: |
-| Preprocessing | 123 | 125 | 126 |
-| Tesseract OCR | 219 | 226 | 236 |
-| Extraction, comparison, and warning analysis | 99 | 102 | 102 |
-| Total case processing | 494 | 521 | 612 |
+| Preprocessing | 123 | 128 | 129 |
+| Tesseract OCR | 218 | 239 | 244 |
+| Extraction, comparison, and warning analysis | 97 | 101 | 111 |
+| Total case processing | 496 | 512 | 609 |
 
-These synthetic-label measurements are a reproducible regression baseline, not a promise for every photograph or host. They are comfortably below the stakeholder's approximately five-second ordinary-use target on the measured environment.
+These synthetic-label results are a reproducible deterministic regression baseline. Their exact status accuracy is not an estimate of accuracy, precision, or recall on real submitted labels, and the timing is not a promise for every photograph or host. They are comfortably below the stakeholder's approximately five-second ordinary-use target on the measured environment.
 
 ## Docker
 

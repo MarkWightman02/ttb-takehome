@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+from typing import Literal
 
 from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont
 
@@ -28,6 +29,7 @@ class EvaluationCase:
     warning_lines: tuple[str, ...] = WARNING_LINES
     warning_heading_bold: bool = True
     degradation: str | None = None
+    panel_layout: Literal["single", "product_left", "product_right"] = "single"
     notes: str = ""
 
 
@@ -63,6 +65,44 @@ def evaluation_cases() -> tuple[EvaluationCase, ...]:
             imported=True,
             country="France",
             origin_line="PRODUCT OF FRANCE",
+        ),
+        _case(
+            "two_panel_product_left_warning_right",
+            "distilled spirits",
+            brand="12345 Imports",
+            class_type="Rum with Coconut Liqueur",
+            abv=18,
+            volume="200 mL",
+            producer="12345 Imports",
+            address="Miami, Florida",
+            label_brand="12345 IMPORTS",
+            label_class="RUM WITH\nCOCONUT LIQUEUR",
+            label_abv="18% ALC./VOL.",
+            label_volume="200 ML",
+            producer_lines=("IMPORTED BY: 12345 IMPORTS", "MIAMI, FL"),
+            imported=True,
+            country="Canada",
+            origin_line="PRODUCED IN CANADA",
+            panel_layout="product_left",
+            overrides={"warning.continuous_statement": "match"},
+            notes="Front product panel and back warning/importer panel share TSV rows.",
+        ),
+        _case(
+            "two_panel_warning_left_product_right",
+            "distilled spirits",
+            brand="North Star",
+            class_type="Canadian Whisky",
+            abv=40,
+            volume="750 mL",
+            producer="North Star Imports",
+            address="Boston, Massachusetts",
+            producer_lines=("IMPORTED BY NORTH STAR IMPORTS", "BOSTON, MA"),
+            imported=True,
+            country="Canada",
+            origin_line="PRODUCED IN CANADA",
+            panel_layout="product_right",
+            overrides={"warning.continuous_statement": "match"},
+            notes="Warning/importer panel precedes the product panel spatially.",
         ),
         _case(
             "beer_wrapped_producer",
@@ -150,8 +190,6 @@ def evaluation_cases() -> tuple[EvaluationCase, ...]:
             + ("operate machinery, and may cause health benefits.",),
             overrides={
                 "warning.wording": "mismatch",
-                "warning.continuous_statement": "mismatch",
-                "warning.separation": "review",
             },
         ),
         _case(
@@ -288,23 +326,26 @@ def evaluation_cases() -> tuple[EvaluationCase, ...]:
 def render_case(case: EvaluationCase) -> RenderedCase:
     if not REGULAR_FONT.is_file() or not BOLD_FONT.is_file():
         raise RuntimeError("The evaluation corpus requires DejaVu Sans fonts.")
-    image = Image.new("RGB", (2600, 1800), "white")
+    image = Image.new("RGB", (2800 if case.panel_layout != "single" else 2600, 1800), "white")
     draw = ImageDraw.Draw(image)
     title_font = ImageFont.truetype(BOLD_FONT, 56)
     body_font = ImageFont.truetype(REGULAR_FONT, 34)
     heading_font = ImageFont.truetype(BOLD_FONT if case.warning_heading_bold else REGULAR_FONT, 36)
-    draw.multiline_text(
-        (100, 55),
-        "\n".join(case.label_lines),
-        fill="black",
-        font=title_font,
-        spacing=18,
-    )
-    if case.warning_lines:
-        warning_y = 850
-        draw.text((100, warning_y), case.warning_heading, fill="black", font=heading_font)
-        for index, line in enumerate(case.warning_lines, 1):
-            draw.text((100, warning_y + index * 58), line, fill="black", font=body_font)
+    if case.panel_layout == "single":
+        draw.multiline_text(
+            (100, 55),
+            "\n".join(case.label_lines),
+            fill="black",
+            font=title_font,
+            spacing=18,
+        )
+        if case.warning_lines:
+            warning_y = 850
+            draw.text((100, warning_y), case.warning_heading, fill="black", font=heading_font)
+            for index, line in enumerate(case.warning_lines, 1):
+                draw.text((100, warning_y + index * 58), line, fill="black", font=body_font)
+    else:
+        _draw_multi_panel(image, case)
 
     media_type = "image/png"
     save_format = "PNG"
@@ -346,6 +387,7 @@ def _case(
     warning_lines: tuple[str, ...] = WARNING_LINES,
     warning_heading_bold: bool = True,
     degradation: str | None = None,
+    panel_layout: Literal["single", "product_left", "product_right"] = "single",
     notes: str = "",
     overrides: dict[str, str] | None = None,
 ) -> EvaluationCase:
@@ -380,6 +422,7 @@ def _case(
         warning_lines=warning_lines,
         warning_heading_bold=warning_heading_bold,
         degradation=degradation,
+        panel_layout=panel_layout,
         notes=notes,
     )
 
@@ -404,3 +447,45 @@ def _matching_expectations(imported: bool) -> dict[str, str]:
         "warning.type_size": "review",
         "warning.characters_per_inch": "review",
     }
+
+
+def _draw_multi_panel(image: Image.Image, case: EvaluationCase) -> None:
+    draw = ImageDraw.Draw(image)
+    product_x, secondary_x = (120, 1500) if case.panel_layout == "product_left" else (1500, 120)
+    draw.rectangle((50, 40, 1300, 1720), outline="black", width=3)
+    draw.rectangle((1450, 40, 2750, 1720), outline="black", width=3)
+
+    brand_font = ImageFont.truetype(BOLD_FONT, 58)
+    class_font = ImageFont.truetype(BOLD_FONT, 50)
+    field_font = ImageFont.truetype(BOLD_FONT, 42)
+    secondary_font = ImageFont.truetype(BOLD_FONT, 32)
+    warning_heading_font = ImageFont.truetype(
+        BOLD_FONT if case.warning_heading_bold else REGULAR_FONT, 32
+    )
+    warning_body_font = ImageFont.truetype(REGULAR_FONT, 24)
+
+    product_lines = case.label_lines[:4]
+    secondary_lines = case.label_lines[4:]
+    draw.text((product_x, 100), product_lines[0], fill="black", font=brand_font)
+    draw.multiline_text(
+        (product_x, 475), product_lines[1], fill="black", font=class_font, spacing=18
+    )
+    draw.text((product_x, 690), product_lines[2], fill="black", font=field_font)
+    draw.text((product_x, 765), product_lines[3], fill="black", font=field_font)
+    if case.application.imported_product:
+        draw.text((product_x, 910), "IMPORTED", fill="black", font=field_font)
+
+    for index, line in enumerate(secondary_lines):
+        draw.text((secondary_x, 100 + index * 70), line, fill="black", font=secondary_font)
+    if case.warning_lines:
+        warning_y = 405
+        draw.text(
+            (secondary_x, warning_y), case.warning_heading, fill="black", font=warning_heading_font
+        )
+        for index, line in enumerate(case.warning_lines, 1):
+            draw.text(
+                (secondary_x, warning_y + index * 62),
+                line,
+                fill="black",
+                font=warning_body_font,
+            )

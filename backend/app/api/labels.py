@@ -14,7 +14,13 @@ from app.services.comparison import compare_application_data, overall_summary
 from app.services.government_warning import analyze_government_warning
 from app.services.image_preprocessing import PreparedImage, normalize_media_type, prepare_image
 from app.services.normalization import normalize_volume
-from app.services.ocr import OcrProcessingError, OcrResult, OcrService, OcrUnavailableError
+from app.services.ocr import (
+    BoundingBox,
+    OcrProcessingError,
+    OcrResult,
+    OcrService,
+    OcrUnavailableError,
+)
 from app.services.structured_extraction import extract_candidates
 
 logger = logging.getLogger(__name__)
@@ -121,13 +127,28 @@ async def verify_label(
     upload = await _single_upload(files)
     started = perf_counter()
     processed = await _process_upload(request, upload)
-    candidates = extract_candidates(processed.ocr_result.text)
-    results = compare_application_data(expected, candidates)
     warning = analyze_government_warning(
         processed.ocr_result,
         preprocessed_image=processed.prepared.visual_evidence_data,
         container_volume_ml=normalize_volume(expected.net_contents),
     )
+    warning_regions = (
+        (
+            BoundingBox(
+                left=warning.bounding_box.left,
+                top=warning.bounding_box.top,
+                width=warning.bounding_box.width,
+                height=warning.bounding_box.height,
+            ),
+        )
+        if warning.bounding_box is not None
+        else ()
+    )
+    candidates = extract_candidates(
+        processed.ocr_result,
+        excluded_regions=warning_regions,
+    )
+    results = compare_application_data(expected, candidates)
     prepared = processed.prepared
     return LabelVerificationResponse(
         expected=expected,

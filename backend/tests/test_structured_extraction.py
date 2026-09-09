@@ -134,6 +134,7 @@ def test_extracts_city_and_state_without_comma():
         ("PRODUCT OF ITALY", "ITALY"),
         ("Imported from Mexico", "Mexico"),
         ("Made in Ireland", "Ireland"),
+        ("PRODUCED IN CANADA", "CANADA"),
     ],
 )
 def test_extracts_country_of_origin_cues(line: str, country: str):
