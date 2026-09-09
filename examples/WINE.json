@@ -1,0 +1,10 @@
+{
+  "brand_name": "ABC WINERY",
+  "class_type": "AMERICAN RED WINE",
+  "abv": 13,
+  "net_contents": "750 ML",
+  "producer_name": "XYZ CELLARS",
+  "producer_address": "CITY, STATE",
+  "imported": false,
+  "country_of_origin": null
+}

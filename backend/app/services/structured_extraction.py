@@ -9,13 +9,15 @@ from app.models.verification import (
     VolumeCandidate,
 )
 from app.services.normalization import (
+    MILLILITERS_PER_US_FLUID_OUNCE,
+    MILLILITERS_PER_US_PINT,
     STATE_NAMES,
     normalize_address,
     normalize_country,
     normalize_text,
 )
 from app.services.ocr import BoundingBox, OcrResult
-from app.services.spatial_layout import OcrLine, overlaps_box, reconstruct_ocr_lines
+from app.services.spatial_layout import OcrLine, overlaps_box, reconstruct_ocr_lines, union_boxes
 
 ABV_NUMBER = r"\d{1,3}(?:\.\d+)?"
 VOLUME_NUMBER = r"\d+(?:\.\d+)?"
@@ -37,7 +39,8 @@ ABV_PATTERNS = (
 )
 VOLUME_PATTERN = re.compile(
     rf"(?<![\w.])(?P<value>{VOLUME_NUMBER})\s*"
-    r"(?P<unit>ml|(?-i:mI)|millilit(?:er|re)s?|l|lit(?:er|re)s?)(?!\w)",
+    r"(?P<unit>ml|(?-i:mI)|millilit(?:er|re)s?|l|lit(?:er|re)s?|"
+    r"pints?|pt|fl\.?\s*oz\.?|fluid\s+ounces?)(?!\w)",
     re.IGNORECASE,
 )
 CLASS_TYPE_CUES = re.compile(
@@ -46,6 +49,7 @@ CLASS_TYPE_CUES = re.compile(
     r"merlot|riesling|ros[ée]|liqueur|cordial)\b",
     re.IGNORECASE,
 )
+CLASS_ACRONYM_CUES = re.compile(r"\bipa\b", re.IGNORECASE)
 EXCLUDED_BRAND_PHRASES = re.compile(
     r"\b(?:government\s+warning|alcohol\s+by\s+volume|alc\.?\s*/?\s*vol|"
     r"contains\s+sulfites|bottled\s+by|produced\s+by|distilled\s+by|"
@@ -65,8 +69,14 @@ GENERIC_BRAND_LINES = {
     "established",
 }
 PRODUCER_CUE = re.compile(
-    r"\b(?P<role>(?:produced\s+and\s+bottled|bottled|produced|distilled|brewed|"
+    r"\b(?P<role>(?:(?:produced|distilled)\s+and\s+bottled|bottled|produced|distilled|brewed|"
     r"vinted|cellared|imported)\s+by)\b[\s,:-]*(?P<name>.*)$",
+    re.IGNORECASE,
+)
+INLINE_CITY_STATE = re.compile(
+    r"^(?P<name>.+?),\s*(?P<city>[A-Za-z .'-]+),\s*"
+    rf"(?P<state>{'|'.join(STATE_NAMES)}|{'|'.join(sorted(set(STATE_NAMES.values())))}|state)"
+    r"(?:\s+\d{5}(?:-\d{4})?)?\s*$",
     re.IGNORECASE,
 )
 ORIGIN_PATTERN = re.compile(
@@ -78,9 +88,10 @@ ORIGIN_PATTERN = re.compile(
 ADDRESS_CUE = re.compile(
     r"(?:\b\d{5}(?:-\d{4})?\s*$|\b(?:street|st\.?|road|rd\.?|avenue|ave\.?|"
     r"boulevard|blvd\.?|lane|ln\.?|drive|dr\.?|highway|hwy\.?|p\.?\s*o\.?\s*box)\b|"
-    rf"[A-Za-z .'-]+,?\s+(?:{'|'.join(sorted(set(STATE_NAMES.values())))})"
+    rf"[A-Za-z .'-]+(?:,\s*|\.\s+|\s+)(?:{'|'.join(sorted(set(STATE_NAMES.values())))})"
     r"(?:\s+\d{5})?\s*$|"
-    rf",\s*(?:{'|'.join(STATE_NAMES)})\s*$)",
+    rf"[A-Za-z .'-]+(?:,\s*|\.\s+|\s+)(?:{'|'.join(STATE_NAMES)})\s*$|"
+    r"[A-Za-z .'-]+,\s*STATE\s*$)",
     re.IGNORECASE,
 )
 
@@ -136,7 +147,14 @@ def _extract_producer_candidates(
         inline_name = match.group("name").strip(" ,:-")
         next_index = index + 1
         if inline_name:
-            names.append(_text_candidate(inline_name, line.text, line.sequence_number))
+            inline_address = INLINE_CITY_STATE.fullmatch(inline_name)
+            if inline_address is not None:
+                company = inline_address.group("name").strip(" ,:-")
+                address = f"{inline_address.group('city').strip()}, {inline_address.group('state')}"
+                names.append(_text_candidate(company, line.text, line.sequence_number))
+                addresses.append(_address_candidate(address, line.text, line.sequence_number))
+            else:
+                names.append(_text_candidate(inline_name, line.text, line.sequence_number))
         elif next_index < len(lines) and not ADDRESS_CUE.search(lines[next_index].text):
             name_line = lines[next_index]
             names.append(
@@ -153,12 +171,7 @@ def _extract_producer_candidates(
             image_height=image_height,
         )
         addresses.extend(
-            TextCandidate(
-                raw_value=candidate.text,
-                normalized_value=normalize_address(candidate.text),
-                source_line=candidate.text,
-                line_number=candidate.sequence_number,
-            )
+            _address_candidate(candidate.text, candidate.text, candidate.sequence_number)
             for candidate in nearby
         )
     return _deduplicate_text(names), _deduplicate_text(addresses)
@@ -223,6 +236,15 @@ def _text_candidate(raw_value: str, source_line: str, line_number: int) -> TextC
     )
 
 
+def _address_candidate(raw_value: str, source_line: str, line_number: int) -> TextCandidate:
+    return TextCandidate(
+        raw_value=raw_value,
+        normalized_value=normalize_address(raw_value),
+        source_line=source_line,
+        line_number=line_number,
+    )
+
+
 def _deduplicate_text(candidates: list[TextCandidate]) -> list[TextCandidate]:
     seen: set[tuple[str, int]] = set()
     unique: list[TextCandidate] = []
@@ -266,7 +288,14 @@ def _extract_volume_candidates(lines: list[OcrLine]) -> list[VolumeCandidate]:
             if amount <= 0:
                 continue
             unit = match.group("unit").casefold()
-            normalized_ml = amount * 1000 if unit == "l" or unit.startswith("lit") else amount
+            if unit == "l" or unit.startswith("lit"):
+                normalized_ml = amount * 1000
+            elif unit.startswith("pint") or unit == "pt":
+                normalized_ml = amount * float(MILLILITERS_PER_US_PINT)
+            elif unit.startswith("fl") or unit.startswith("fluid"):
+                normalized_ml = amount * float(MILLILITERS_PER_US_FLUID_OUNCE)
+            else:
+                normalized_ml = amount
             candidates.append(
                 VolumeCandidate(
                     raw_value=match.group(0).strip(),
@@ -284,6 +313,21 @@ def _extract_class_type_candidates(lines: list[OcrLine]) -> list[TextCandidate]:
     for index, line in enumerate(lines):
         if index in used or not _is_class_line(line):
             continue
+        if CLASS_ACRONYM_CUES.search(line.text) and index > 0:
+            preceding = lines[index - 1]
+            if (
+                not _is_class_line(preceding)
+                and _lines_are_neighbors(preceding, line)
+                and _looks_like_class_text(preceding.text)
+            ):
+                candidates.append(
+                    TextCandidate(
+                        raw_value=preceding.text,
+                        normalized_value=normalize_text(preceding.text),
+                        source_line=f"{preceding.text}\n{line.text}",
+                        line_number=preceding.sequence_number,
+                    )
+                )
         coherent = [line]
         used.add(index)
         next_index = index + 1
@@ -309,7 +353,15 @@ def _extract_class_type_candidates(lines: list[OcrLine]) -> list[TextCandidate]:
 
 
 def _is_class_line(line: OcrLine) -> bool:
-    return bool(CLASS_TYPE_CUES.search(line.text) and not EXCLUDED_BRAND_PHRASES.search(line.text))
+    return bool(
+        (CLASS_TYPE_CUES.search(line.text) or CLASS_ACRONYM_CUES.search(line.text))
+        and not EXCLUDED_BRAND_PHRASES.search(line.text)
+    )
+
+
+def _looks_like_class_text(value: str) -> bool:
+    words = normalize_text(value).split()
+    return 2 <= len(words) <= 7 and len(value) <= 100
 
 
 def _lines_are_neighbors(first: OcrLine, second: OcrLine) -> bool:
@@ -340,11 +392,18 @@ def _extract_brand_candidates(
 ) -> list[TextCandidate]:
     eligible: list[tuple[float, OcrLine]] = []
     panel_heights: dict[int, list[float]] = {}
+    inferred_class_lines = {
+        lines[index - 1].sequence_number
+        for index, line in enumerate(lines)
+        if index > 0
+        and CLASS_ACRONYM_CUES.search(line.text)
+        and _lines_are_neighbors(lines[index - 1], line)
+    }
     for line in lines:
         if line.approximate_line_height is not None:
             panel_heights.setdefault(line.panel_id, []).append(line.approximate_line_height)
     producer_values = {candidate.normalized_value for candidate in producer_names}
-    for line in lines:
+    for line, joined in _brand_line_candidates(lines, excluded_line_numbers=inferred_class_lines):
         normalized = normalize_text(line.text)
         if (
             not normalized
@@ -368,6 +427,8 @@ def _extract_brand_candidates(
             panel_heights=panel_heights,
             image_height=image_height,
         )
+        if joined:
+            score += 0.75
         eligible.append((score, line))
     if not eligible:
         return []
@@ -380,6 +441,85 @@ def _extract_brand_candidates(
     return [
         _text_candidate(line.text, line.text, line.sequence_number) for _score, line in selected
     ]
+
+
+def _brand_line_candidates(
+    lines: list[OcrLine], *, excluded_line_numbers: set[int]
+) -> list[tuple[OcrLine, bool]]:
+    candidates = [
+        (line, False) for line in lines if line.sequence_number not in excluded_line_numbers
+    ]
+    for first, second in zip(lines, lines[1:], strict=False):
+        if (
+            first.sequence_number in excluded_line_numbers
+            or second.sequence_number in excluded_line_numbers
+            or not _can_join_brand_line(first)
+            or not _can_join_brand_line(second, allow_numeric=False)
+            or not _brand_lines_are_neighbors(first, second)
+        ):
+            continue
+        boxes = [first.bounding_box, second.bounding_box]
+        confidences = [
+            value for value in (first.mean_confidence, second.mean_confidence) if value is not None
+        ]
+        heights = [
+            value
+            for value in (first.approximate_line_height, second.approximate_line_height)
+            if value is not None
+        ]
+        candidates.append(
+            (
+                OcrLine(
+                    text=f"{first.text} {second.text}",
+                    words=(*first.words, *second.words),
+                    bounding_box=union_boxes(boxes),
+                    mean_confidence=statistics.fmean(confidences) if confidences else None,
+                    page_id=first.page_id,
+                    block_id=first.block_id,
+                    paragraph_id=first.paragraph_id,
+                    line_id=first.line_id,
+                    approximate_line_height=statistics.median(heights) if heights else None,
+                    panel_id=first.panel_id,
+                    sequence_number=first.sequence_number,
+                ),
+                True,
+            )
+        )
+    return candidates
+
+
+def _can_join_brand_line(line: OcrLine, *, allow_numeric: bool = True) -> bool:
+    has_alpha = any(character.isalpha() for character in line.text)
+    return bool(
+        (has_alpha or (allow_numeric and re.search(r"\d{2,}", line.text)))
+        and len(line.text) <= 60
+        and not ADDRESS_CUE.search(line.text)
+        and not CLASS_TYPE_CUES.search(line.text)
+        and not CLASS_ACRONYM_CUES.search(line.text)
+        and not EXCLUDED_BRAND_PHRASES.search(line.text)
+        and not PRODUCER_CUE.search(line.text)
+        and not ORIGIN_PATTERN.search(line.text)
+        and not any(pattern.search(line.text) for pattern in ABV_PATTERNS)
+        and not VOLUME_PATTERN.search(line.text)
+    )
+
+
+def _brand_lines_are_neighbors(first: OcrLine, second: OcrLine) -> bool:
+    if first.bounding_box is None or second.bounding_box is None:
+        return False
+    if first.panel_id != second.panel_id:
+        return False
+    first_box = first.bounding_box
+    second_box = second.bounding_box
+    vertical_gap = second_box.top - (first_box.top + first_box.height)
+    typical_height = max(first_box.height, second_box.height)
+    first_center = first_box.left + first_box.width / 2
+    second_center = second_box.left + second_box.width / 2
+    return (
+        -typical_height * 0.25 <= vertical_gap <= typical_height * 1.2
+        and abs(first_center - second_center) <= max(first_box.width, second_box.width) * 0.4
+        and any(character.isalpha() for character in f"{first.text}{second.text}")
+    )
 
 
 def _brand_score(

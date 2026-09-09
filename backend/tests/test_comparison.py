@@ -134,6 +134,23 @@ def test_numeric_equivalence_and_actual_mismatches():
     assert overall_summary(mismatches) == "One or more application fields do not match the label."
 
 
+def test_us_pint_and_fluid_ounces_compare_using_exact_conversion():
+    candidates = complete_candidates()
+    candidates.net_contents = [
+        VolumeCandidate(
+            raw_value="16 FL OZ",
+            normalized_ml=473.176473,
+            source_line="16 FL OZ",
+            line_number=4,
+        )
+    ]
+
+    result = compare_application_data(application(net_contents="1 PINT"), candidates)
+
+    assert result.net_contents.status == "match"
+    assert result.net_contents.expected_normalized == 473.176473
+
+
 def test_missing_numeric_candidates_are_not_found():
     candidates = complete_candidates()
     candidates.abv = []

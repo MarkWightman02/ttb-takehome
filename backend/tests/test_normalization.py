@@ -30,7 +30,16 @@ def test_abv_normalization(value: str, expected: float):
 
 @pytest.mark.parametrize(
     ("value", "expected"),
-    [("750 mL", 750.0), ("750ml", 750.0), ("1 L", 1000.0), ("1 Liter", 1000.0)],
+    [
+        ("750 mL", 750.0),
+        ("750ml", 750.0),
+        ("1 L", 1000.0),
+        ("1 Liter", 1000.0),
+        ("1 PINT", 473.176473),
+        ("1 pt", 473.176473),
+        ("16 FL OZ", 473.176473),
+        ("16 fluid ounces", 473.176473),
+    ],
 )
 def test_volume_normalization(value: str, expected: float):
     assert normalize_volume(value) == expected
@@ -44,7 +53,7 @@ def test_abv_normalization_rejects_impossible_values(value: str):
 
 def test_volume_normalization_rejects_incompatible_units():
     with pytest.raises(ValueError):
-        normalize_volume("25 fl oz")
+        normalize_volume("1 gallon")
 
 
 def test_address_normalization_handles_state_name_and_punctuation():

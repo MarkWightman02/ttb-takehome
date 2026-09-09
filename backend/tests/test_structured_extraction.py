@@ -52,6 +52,21 @@ def test_extracts_metric_volume(line: str, expected_ml: float):
     assert candidate.source_line == line
 
 
+@pytest.mark.parametrize(
+    ("line", "expected_ml"),
+    [
+        ("1 PINT", 473.176473),
+        ("1 PT", 473.176473),
+        ("16 FL OZ", 473.176473),
+        ("16 fluid ounces", 473.176473),
+    ],
+)
+def test_extracts_us_fluid_volume(line: str, expected_ml: float):
+    candidate = extract_candidates(line).net_contents[0]
+    assert candidate.normalized_ml == expected_ml
+    assert candidate.source_line == line
+
+
 def test_preserves_multiple_volume_candidates():
     candidates = extract_candidates("750 mL\n375 mL").net_contents
     assert [candidate.normalized_ml for candidate in candidates] == [750.0, 375.0]
@@ -120,6 +135,20 @@ def test_extracts_multiline_producer_name_and_address():
         "Produced and bottled by\nExample Spirits LLC"
     )
     assert candidates.producer_address[0].raw_value == "Louisville, Kentucky"
+
+
+def test_extracts_distilled_and_bottled_multiline_entity_block():
+    candidates = extract_candidates("DISTILLED AND BOTTLED BY:\nABC DISTILLERY\nFREDERICK,MD")
+
+    assert candidates.producer_name[0].raw_value == "ABC DISTILLERY"
+    assert candidates.producer_address[0].raw_value == "FREDERICK,MD"
+
+
+def test_splits_same_line_company_and_city_state_address():
+    candidates = extract_candidates("BOTTLED BY XYZ CELLARS, CITY, STATE")
+
+    assert candidates.producer_name[0].raw_value == "XYZ CELLARS"
+    assert candidates.producer_address[0].raw_value == "CITY, STATE"
 
 
 def test_extracts_city_and_state_without_comma():

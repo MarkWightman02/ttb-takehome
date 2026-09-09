@@ -130,11 +130,11 @@ API documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Hea
 
 - Supported formats: PNG, JPEG, and WebP. File contents must match the declared MIME type; filename extensions are not trusted.
 - Limits: 10 MB, at most 12,000 pixels on either edge, and at most 40 million pixels total. These defaults are configurable through the documented `TTB_` settings.
-- Preprocessing: EXIF orientation correction, grayscale conversion, automatic contrast, up to 2× enlargement for small images, and light sharpening. The pipeline avoids hard thresholding that could erase label artwork. A separate request-scoped image preserves the original tonal evidence at the same orientation and scale for visual checks, so OCR contrast enhancement cannot create false contrast evidence.
+- Preprocessing: EXIF orientation correction, grayscale conversion, automatic contrast, selective enlargement toward a 2,400-pixel long edge (up to 4× for low-resolution inputs), and light sharpening. The pipeline avoids hard thresholding that could erase label artwork. A separate request-scoped image preserves the original tonal evidence at the same orientation and scale for visual checks, so OCR contrast enhancement cannot create false contrast evidence.
 - Privacy: bytes remain request-scoped. FastAPI may spool multipart data to secure framework-managed temporary storage; the upload is closed in a `finally` block. The application sends the normalized image to Tesseract over standard input and creates no persistent label file.
 - Output: raw text, engine identifier, total and OCR processing duration, original image metadata, and useful warnings. Internally, the same Tesseract TSV response supplies word confidence, hierarchy, and pixel bounding boxes for warning analysis. Raw text is not a compliance decision.
 
-Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor photographs can reduce accuracy. This slice uses English Tesseract with page-segmentation mode 6. Word confidence and geometry are OCR evidence, not proof of typography or legal legibility.
+Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor photographs can reduce accuracy. Low-resolution labels may therefore produce `review` or `not_found` rather than a guessed value. This slice uses English Tesseract with sparse-text page-segmentation mode 11, which performed more reliably on the evaluated side-by-side TTB samples. Word confidence and geometry are OCR evidence, not proof of typography or legal legibility.
 
 ### Verification endpoint and workflow
 
@@ -146,11 +146,11 @@ Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor p
 - `not_found`: no reliable candidate was extracted; this is a field result, not an HTTP failure.
 - `not_applicable`: the country-of-origin check was explicitly skipped for a domestic application; it does not degrade the overall summary.
 
-Brand and class/type comparison ignores capitalization, harmless punctuation, whitespace, Unicode presentation differences, and straight-versus-curly apostrophes. Conservative approximate text similarity can produce `review`, never `match`. ABV is compared as a percentage number without fuzzy matching. Metric net contents are converted to milliliters, so `1 L` and `1000 mL` match. Multiple distinct percentages or volumes require review even if one equals the expected value.
+Brand and class/type comparison ignores capitalization, harmless punctuation, whitespace, Unicode presentation differences, and straight-versus-curly apostrophes. Conservative approximate text similarity can produce `review`, never `match`. ABV is compared as a percentage number without fuzzy matching. Metric volume plus the label-relevant U.S. pint and fluid-ounce forms are converted to milliliters using exact definitions: one U.S. fluid ounce is 29.5735295625 mL and one U.S. pint is 473.176473 mL. Thus `1 L` and `1000 mL`, or `1 PINT` and `16 FL OZ`, compare equivalently. Other imperial units are not silently converted. Multiple distinct percentages or volumes require review even if one equals the expected value.
 
-Extraction is deliberately deterministic and conservative. It reconstructs spatial lines and lightweight panels from Tesseract TSV words before selecting candidates, so side-by-side front, back, and warning panels are not treated as one flattened reading stream. Brand ranking considers line prominence, panel position, compactness, confidence, and repetition in responsible-entity text. Class/type joins require nearby, aligned lines in the same panel. The localized Government Warning region is excluded from generic product-field extraction. Explicit patterns handle ABV and metric volume. The extractor does not infer proof, accept incompatible volume units, use an exhaustive beverage taxonomy, or manufacture values when text is uncertain. Results assist reviewers and do not constitute approval, rejection, or a legal-compliance determination.
+Extraction is deliberately deterministic and conservative. It reconstructs spatial lines and lightweight panels from Tesseract TSV words before selecting candidates, so side-by-side front, back, and warning panels are not treated as one flattened reading stream. Brand ranking considers line prominence, panel position, compactness, confidence, repetition, and spatially coherent multiline artwork. Class/type joins require nearby, aligned lines in the same panel; an `IPA` cue can preserve a nearby OCR-damaged type line for review. The localized Government Warning region is excluded from generic product-field extraction. Explicit patterns handle ABV and supported volume units. The extractor does not infer proof, accept incompatible volume units, use an exhaustive beverage taxonomy, or manufacture values when text is uncertain. Results assist reviewers and do not constitute approval, rejection, or a legal-compliance determination.
 
-Producer extraction recognizes a small set of role cues such as `Bottled by`, `Produced by`, and `Imported by`, including same-line companies and common multiline name/location layouts. Nearby address candidates must belong to the same spatial panel; several similarly plausible addresses require review. Address comparison ignores case and punctuation and normalizes U.S. state names to abbreviations; partial addresses require review, while distinct cities or states remain mismatches. This is not postal validation or geocoding. Origin extraction recognizes conservative phrases such as `Product of`, `Produced in`, `Imported from`, and `Made in`. Import applicability always comes from the application toggle, never an OCR guess; multiple distinct statements, ambiguous wording, or unfamiliar wording remains review or not found.
+Producer extraction recognizes a small set of role cues such as `Bottled by`, `Distilled and bottled by`, `Produced by`, and `Imported by`. It supports same-line company/city/state blocks as well as multiline cue, company, and location layouts. Nearby address candidates must belong to the same spatial panel; several similarly plausible addresses require review. Address comparison ignores case and punctuation and normalizes U.S. state names to abbreviations; partial addresses require review, while distinct cities or states remain mismatches. This is not postal validation or geocoding. Origin extraction recognizes conservative phrases such as `Product of`, `Produced in`, `Imported from`, and `Made in`. Import applicability always comes from the application toggle, never an OCR guess; multiple distinct statements, ambiguous wording, or unfamiliar wording remains review or not found.
 
 ### Government Health Warning analysis
 
@@ -205,6 +205,14 @@ python backend/scripts/evaluate_labels.py
 
 Add `--json` for case-level OCR text, expected/actual differences, per-check counts, and latency data. The script exits nonzero for OCR/processing failures or false confident matches. Corpus metadata and images are generated in memory; proprietary assets and output files are not required.
 
+Run the separate repository real-label regression set:
+
+```sh
+python backend/scripts/evaluate_real_labels.py
+```
+
+The real-label runner discovers matching PNG/JPEG/WebP image and JSON stems under `examples/`, decodes the actual image format, and runs preprocessing, one real Tesseract TSV invocation, spatial reconstruction, warning exclusion, extraction, and comparison. `--json` includes raw OCR, expected data, candidates, every field and warning result, and per-case latency. Real-label counts are intentionally reported separately from the generated corpus.
+
 `pnpm build` writes `frontend/dist`. For a local production-serving check, set `TTB_FRONTEND_DIST` to that directory's absolute path and start FastAPI. For example, in PowerShell from the root:
 
 ```powershell
@@ -221,12 +229,14 @@ On the Linux development host, the 18-case generated corpus completed all 306 ex
 
 | Stage | Median | p90 | Slowest |
 | --- | ---: | ---: | ---: |
-| Preprocessing | 123 | 128 | 129 |
-| Tesseract OCR | 218 | 239 | 244 |
-| Extraction, comparison, and warning analysis | 97 | 101 | 111 |
-| Total case processing | 496 | 512 | 609 |
+| Preprocessing | 122 | 127 | 163 |
+| Tesseract OCR | 233 | 249 | 259 |
+| Extraction, comparison, and warning analysis | 96 | 99 | 100 |
+| Total case processing | 510 | 523 | 768 |
 
 These synthetic-label results are a reproducible deterministic regression baseline. Their exact status accuracy is not an estimate of accuracy, precision, or recall on real submitted labels, and the timing is not a promise for every photograph or host. They are comfortably below the stakeholder's approximately five-second ordinary-use target on the measured environment.
+
+The six repository real-label examples produced 28 matches, 4 reviews, 5 not-found results, 5 not-applicable results, no mismatches, and no false confident matches in the measured run. Median OCR time was 401 ms; median total time was 886 ms, p90 and slowest total were both 1,016 ms. Six examples are regression evidence, not an accuracy benchmark or a general real-world accuracy estimate.
 
 ## Docker
 

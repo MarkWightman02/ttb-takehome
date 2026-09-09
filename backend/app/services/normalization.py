@@ -5,9 +5,13 @@ from decimal import Decimal, InvalidOperation
 APOSTROPHES = str.maketrans({"’": "'", "‘": "'", "`": "'", "´": "'"})
 VOLUME_PATTERN = re.compile(
     r"^\s*(?P<value>\d+(?:\.\d+)?)\s*"
-    r"(?P<unit>ml|millilit(?:er|re)s?|l|lit(?:er|re)s?)\s*$",
+    r"(?P<unit>ml|millilit(?:er|re)s?|l|lit(?:er|re)s?|"
+    r"pints?|pt|fl\.?\s*oz\.?|fluid\s+ounces?)\s*$",
     re.IGNORECASE,
 )
+
+MILLILITERS_PER_US_FLUID_OUNCE = Decimal("29.5735295625")
+MILLILITERS_PER_US_PINT = Decimal("473.176473")
 
 STATE_NAMES = {
     "alabama": "al",
@@ -111,11 +115,15 @@ def normalize_abv(value: str | float | Decimal) -> float:
 def normalize_volume(value: str) -> float:
     match = VOLUME_PATTERN.fullmatch(unicodedata.normalize("NFKC", value))
     if match is None:
-        raise ValueError("Net contents must use milliliters or liters, such as 750 mL or 1 L.")
+        raise ValueError("Net contents must use mL, L, US pint, or US fluid ounce units.")
     amount = Decimal(match.group("value"))
     if amount <= 0:
         raise ValueError("Net contents must be greater than zero.")
     unit = match.group("unit").casefold()
     if unit == "l" or unit.startswith("lit"):
         amount *= 1000
+    elif unit.startswith("pint") or unit == "pt":
+        amount *= MILLILITERS_PER_US_PINT
+    elif unit.startswith("fl") or unit.startswith("fluid"):
+        amount *= MILLILITERS_PER_US_FLUID_OUNCE
     return float(amount)

@@ -69,9 +69,12 @@ def test_tesseract_timeout_terminates_process_and_returns_processing_error(monke
             return self.returncode
 
     process = SlowProcess()
+    invocation: tuple[object, ...] = ()
 
     async def create_slow_process(*args, **kwargs):
-        del args, kwargs
+        nonlocal invocation
+        invocation = args
+        del kwargs
         return process
 
     monkeypatch.setattr(asyncio, "create_subprocess_exec", create_slow_process)
@@ -81,6 +84,7 @@ def test_tesseract_timeout_terminates_process_and_returns_processing_error(monke
         asyncio.run(service.extract(output.getvalue(), media_type="image/png"))
 
     assert process.killed is True
+    assert invocation[invocation.index("--psm") + 1] == "11"
 
 
 @pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed")
@@ -253,7 +257,8 @@ def test_real_tesseract_extracts_two_panel_label_without_warning_contamination()
     candidates = extract_candidates(ocr_result, excluded_regions=(excluded,))
     results = compare_application_data(case.application, candidates)
 
-    assert "12345 IMPORTS IMPORTED BY: 12345 IMPORTS" in ocr_result.text
+    assert "12345 IMPORTS" in ocr_result.text
+    assert "IMPORTED BY: 12345 IMPORTS" in ocr_result.text
     assert [candidate.raw_value for candidate in candidates.brand_name] == ["12345 IMPORTS"]
     assert [candidate.raw_value for candidate in candidates.class_type] == [
         "RUM WITH COCONUT LIQUEUR"

@@ -1,0 +1,10 @@
+{
+  "brand_name": "ABC WINERY",
+  "class_type": "ROSE WINE",
+  "abv": 12.5,
+  "net_contents": "750 ML",
+  "producer_name": "ABC WINERY",
+  "producer_address": "CITY, STATE",
+  "imported": false,
+  "country_of_origin": null
+}

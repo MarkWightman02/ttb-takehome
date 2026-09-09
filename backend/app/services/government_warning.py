@@ -216,6 +216,7 @@ def _localize_structured(
 def _warning_lines_from(lines: list[OcrLine], start: int) -> list[OcrLine]:
     selected: list[OcrLine] = []
     tokens: list[str] = []
+    anchor = lines[start]
     heights = [
         line.approximate_line_height
         for line in lines[start:]
@@ -223,7 +224,9 @@ def _warning_lines_from(lines: list[OcrLine], start: int) -> list[OcrLine]:
     ]
     typical_height = statistics.median(heights) if heights else 20
     previous_bottom: int | None = None
-    for line in lines[start : start + 14]:
+    for line in lines[start : start + 40]:
+        if line is not anchor and not _shares_warning_column(anchor, line):
+            continue
         box = line.bounding_box
         if (
             selected
@@ -241,7 +244,26 @@ def _warning_lines_from(lines: list[OcrLine], start: int) -> list[OcrLine]:
             break
         if len(tokens) >= 100:
             break
+        if len(selected) >= 14:
+            break
     return selected
+
+
+def _shares_warning_column(anchor: OcrLine, candidate: OcrLine) -> bool:
+    first = anchor.bounding_box
+    second = candidate.bounding_box
+    if first is None or second is None:
+        return True
+    overlap = max(
+        0,
+        min(first.left + first.width, second.left + second.width) - max(first.left, second.left),
+    )
+    minimum_width = min(first.width, second.width)
+    first_center = first.left + first.width / 2
+    second_center = second.left + second.width / 2
+    return overlap >= minimum_width * 0.25 and abs(first_center - second_center) <= max(
+        first.width, second.width
+    )
 
 
 def _localize_raw_text(raw_text: str) -> LocalizedWarning | None:
@@ -509,15 +531,27 @@ def _continuity_check(localized: LocalizedWarning | None) -> WarningCheck:
             ),
             evidence=list(localized.source_lines),
         )
+    paragraphs_by_block: dict[tuple[int | None, int | None], set[int]] = {}
+    for region in localized.regions:
+        if region.paragraph_id is None:
+            continue
+        block = (region.page_id, region.block_id)
+        paragraphs_by_block.setdefault(block, set()).add(region.paragraph_id)
+    if any(len(paragraphs) > 1 for paragraphs in paragraphs_by_block.values()):
+        return WarningCheck(
+            status="review",
+            explanation="The clauses occur in order but include an OCR paragraph break.",
+            evidence=list(localized.source_lines),
+        )
     block_ids = {
-        (region.page_id, region.block_id, region.paragraph_id)
+        (region.page_id, region.block_id)
         for region in localized.regions
         if region.block_id is not None
     }
     if len(block_ids) > 1:
         return WarningCheck(
             status="review",
-            explanation="The clauses occur in order but span multiple OCR blocks or paragraphs.",
+            explanation="The clauses occur in order but span multiple OCR text blocks.",
             evidence=list(localized.source_lines),
             measurements={"ocr_block_count": len(block_ids)},
         )
@@ -545,8 +579,8 @@ def _continuity_check(localized: LocalizedWarning | None) -> WarningCheck:
     return WarningCheck(
         status="match",
         explanation=_sentence(
-            "Both numbered portions occur in sequence within one coherent OCR",
-            "block; normal line wrapping is allowed.",
+            "Both numbered portions occur in sequence within spatially coherent",
+            "OCR lines; normal line wrapping is allowed.",
         ),
         evidence=list(localized.source_lines),
         measurements={"ocr_line_count": len(localized.source_lines)},

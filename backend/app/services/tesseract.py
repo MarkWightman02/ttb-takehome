@@ -41,7 +41,7 @@ class TesseractOcrService:
                 "-l",
                 self.language,
                 "--psm",
-                "6",
+                "11",
                 "tsv",
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,

@@ -35,11 +35,11 @@ def test_preprocessing_normalizes_orientation_grayscale_and_small_image(settings
     with Image.open(BytesIO(prepared.data)) as image:
         assert image.format == "PNG"
         assert image.mode == "L"
-        assert image.size == (500, 1000)
+        assert image.size == (1000, 2000)
     with Image.open(BytesIO(prepared.visual_evidence_data)) as image:
         assert image.format == "PNG"
         assert image.mode == "RGB"
-        assert image.size == (500, 1000)
+        assert image.size == (1000, 2000)
 
 
 def test_preprocessing_rejects_mime_content_mismatch(settings: Settings):

@@ -69,7 +69,7 @@ def test_successful_image_upload_returns_raw_ocr_result(settings: Settings):
     with Image.open(BytesIO(service.received_image)) as prepared:
         assert prepared.format == "PNG"
         assert prepared.mode == "L"
-        assert prepared.size == (1600, 800)
+        assert prepared.size == (2400, 1200)
 
 
 def test_upload_rejects_unsupported_mime_type(settings: Settings):

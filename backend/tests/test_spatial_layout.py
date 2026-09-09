@@ -304,6 +304,67 @@ def test_spatially_distant_class_lines_are_not_concatenated():
     ]
 
 
+def test_multiline_brand_is_joined_and_repeated_brand_evidence_is_preserved():
+    regions = []
+    regions += row(1, 100, [("Fake", 100, 130, 55), ("Brewery", 250, 210, 55)])
+    regions += row(2, 165, [("Name", 220, 140, 50)])
+    regions += row(3, 280, [("India", 100, 130, 35), ("Pale", 250, 100, 35), ("Ale", 370, 80, 35)])
+    regions += row(
+        4, 100, [("Fake", 1400, 100, 35), ("Brewery", 1520, 160, 35), ("Name", 1700, 100, 35)]
+    )
+    regions += row(5, 180, [("GOVERNMENT", 1400, 240, 30), ("WARNING:", 1660, 180, 30)])
+    regions += row(6, 240, [("According", 1400, 160, 28), ("to", 1580, 40, 28)])
+
+    candidates = extract_candidates(ocr_result(regions))
+
+    assert candidates.brand_name[0].raw_value == "Fake Brewery Name"
+
+
+def test_prominent_brand_is_not_replaced_by_responsible_entity_name():
+    regions = []
+    regions += row(1, 100, [("ABC", 100, 330, 100)])
+    regions += row(
+        2, 250, [("STRAIGHT", 100, 220, 40), ("RYE", 340, 100, 40), ("WHISKY", 460, 180, 40)]
+    )
+    regions += row(
+        3,
+        100,
+        [
+            ("DISTILLED", 1400, 180, 30),
+            ("AND", 1600, 70, 30),
+            ("BOTTLED", 1690, 160, 30),
+            ("BY:", 1870, 60, 30),
+        ],
+    )
+    regions += row(4, 150, [("ABC", 1400, 90, 30), ("DISTILLERY", 1510, 210, 30)])
+    regions += row(5, 200, [("FREDERICK,", 1400, 220, 30), ("MD", 1640, 50, 30)])
+
+    candidates = extract_candidates(ocr_result(regions))
+
+    assert candidates.brand_name[0].raw_value == "ABC"
+    assert candidates.producer_name[0].raw_value == "ABC DISTILLERY"
+    assert candidates.producer_address[0].raw_value == "FREDERICK, MD"
+
+
+def test_ipa_cue_preserves_nearby_ocr_damaged_class_for_review():
+    regions = []
+    regions += row(1, 200, [("India", 100, 140, 50), ("bale", 260, 120, 50), ("Ak", 400, 70, 50)])
+    regions += row(2, 260, [("IPA", 100, 100, 30), ("SERIES", 220, 150, 30)])
+    candidates = extract_candidates(ocr_result(regions))
+    expected = ApplicationData(
+        brand_name="Malt & Hop Brewery",
+        class_type="India Pale Ale",
+        abv=4,
+        net_contents="500 mL",
+        producer_name="Malt & Hop Brewery",
+        producer_address="Hyattsville, MD",
+        imported_product=False,
+    )
+
+    assert candidates.class_type[0].raw_value == "India bale Ak"
+    assert compare_application_data(expected, candidates).class_type.status == "review"
+
+
 def test_ambiguous_brand_geometry_requires_review():
     regions = []
     regions += row(1, 100, [("ALPHA", 100, 180, 50), ("HOUSE", 300, 180, 50)])

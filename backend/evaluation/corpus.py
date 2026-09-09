@@ -84,7 +84,6 @@ def evaluation_cases() -> tuple[EvaluationCase, ...]:
             country="Canada",
             origin_line="PRODUCED IN CANADA",
             panel_layout="product_left",
-            overrides={"warning.continuous_statement": "match"},
             notes="Front product panel and back warning/importer panel share TSV rows.",
         ),
         _case(
@@ -101,7 +100,6 @@ def evaluation_cases() -> tuple[EvaluationCase, ...]:
             country="Canada",
             origin_line="PRODUCED IN CANADA",
             panel_layout="product_right",
-            overrides={"warning.continuous_statement": "match"},
             notes="Warning/importer panel precedes the product panel spatially.",
         ),
         _case(

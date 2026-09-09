@@ -171,14 +171,27 @@ def test_upload_validation_happens_before_ocr(settings: Settings):
     assert service.calls == 0
 
 
-def test_invalid_expected_metric_volume_is_rejected_before_ocr(settings: Settings):
+def test_unsupported_expected_volume_is_rejected_before_ocr(settings: Settings):
     service = CountingOcrService("unused")
     with TestClient(create_app(settings, ocr_service=service)) as client:
-        response = verify(client, net_contents="25 fl oz")
+        response = verify(client, net_contents="1 gallon")
 
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "invalid_net_contents"
     assert service.calls == 0
+
+
+def test_us_pint_volume_is_accepted_and_compared_with_one_ocr_call(settings: Settings):
+    service = CountingOcrService(
+        "OLD TOM DISTILLERY\nBourbon Whiskey\n45% ABV\n1 PINT\n"
+        "Bottled by Old Tom Distillery LLC\nLouisville, KY"
+    )
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = verify(client, class_type="Bourbon Whiskey", net_contents="16 FL OZ")
+
+    assert response.status_code == 200
+    assert response.json()["results"]["net_contents"]["status"] == "match"
+    assert service.calls == 1
 
 
 def test_invalid_abv_is_a_typed_validation_error_before_ocr(settings: Settings):

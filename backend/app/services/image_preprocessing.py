@@ -15,8 +15,8 @@ ALLOWED_MEDIA_TYPES = {
 FORMAT_MEDIA_TYPES = {
     image_format: media_type for media_type, image_format in ALLOWED_MEDIA_TYPES.items()
 }
-TARGET_LONG_EDGE = 1_600
-MAX_UPSCALE = 2.0
+TARGET_LONG_EDGE = 2_400
+MAX_UPSCALE = 4.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -92,7 +92,7 @@ def prepare_image(data: bytes, *, content_type: str | None, settings: Settings) 
         scale = min(MAX_UPSCALE, TARGET_LONG_EDGE / long_edge)
         resized = tuple(max(1, round(dimension * scale)) for dimension in processed.size)
         processed = processed.resize(resized, Image.Resampling.LANCZOS)
-        visual_evidence = visual_evidence.resize(resized, Image.Resampling.LANCZOS)
+        visual_evidence = visual_evidence.resize(resized, Image.Resampling.BILINEAR)
         if min(original_width, original_height) < 300:
             processing_warnings.append(
                 "The image is low resolution; extracted text may be incomplete."
