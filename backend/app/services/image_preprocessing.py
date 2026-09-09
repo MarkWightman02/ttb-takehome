@@ -22,6 +22,7 @@ MAX_UPSCALE = 2.0
 @dataclass(frozen=True, slots=True)
 class PreparedImage:
     data: bytes
+    visual_evidence_data: bytes
     original_width: int
     original_height: int
     original_format: str
@@ -66,6 +67,7 @@ def prepare_image(data: bytes, *, content_type: str | None, settings: Settings) 
                 _validate_dimensions(width, height, settings)
                 source.load()
                 oriented = ImageOps.exif_transpose(source)
+                visual_evidence = oriented.convert("RGB")
                 processed = ImageOps.autocontrast(oriented.convert("L"))
                 original_width, original_height = oriented.size
     except ApiError:
@@ -90,6 +92,7 @@ def prepare_image(data: bytes, *, content_type: str | None, settings: Settings) 
         scale = min(MAX_UPSCALE, TARGET_LONG_EDGE / long_edge)
         resized = tuple(max(1, round(dimension * scale)) for dimension in processed.size)
         processed = processed.resize(resized, Image.Resampling.LANCZOS)
+        visual_evidence = visual_evidence.resize(resized, Image.Resampling.LANCZOS)
         if min(original_width, original_height) < 300:
             processing_warnings.append(
                 "The image is low resolution; extracted text may be incomplete."
@@ -99,9 +102,13 @@ def prepare_image(data: bytes, *, content_type: str | None, settings: Settings) 
     output = BytesIO()
     processed.save(output, format="PNG")
     processed.close()
+    visual_output = BytesIO()
+    visual_evidence.save(visual_output, format="PNG")
+    visual_evidence.close()
 
     return PreparedImage(
         data=output.getvalue(),
+        visual_evidence_data=visual_output.getvalue(),
         original_width=original_width,
         original_height=original_height,
         original_format=image_format,

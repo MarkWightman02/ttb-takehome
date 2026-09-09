@@ -40,7 +40,9 @@ CLASS_TYPE_CUES = re.compile(
 EXCLUDED_BRAND_PHRASES = re.compile(
     r"\b(?:government\s+warning|alcohol\s+by\s+volume|alc\.?\s*/?\s*vol|"
     r"contains\s+sulfites|bottled\s+by|produced\s+by|distilled\s+by|"
-    r"imported\s+by|product\s+of|proof|net\s+contents?)\b",
+    r"imported\s+by|product\s+of|proof|net\s+contents?|surgeon\s+general|"
+    r"risk\s+of\s+birth\s+defects|consumption\s+of\s+alcoholic\s+beverages|"
+    r"operate\s+machinery|may\s+cause\s+health\s+problems)\b",
     re.IGNORECASE,
 )
 GENERIC_BRAND_LINES = {

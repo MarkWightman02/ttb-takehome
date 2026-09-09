@@ -62,10 +62,49 @@ class VerificationResults(BaseModel):
     net_contents: FieldVerificationResult
 
 
+class WarningBoundingBox(BaseModel):
+    left: int = Field(ge=0)
+    top: int = Field(ge=0)
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    coordinate_space: Literal["preprocessed_image"] = "preprocessed_image"
+
+
+class WarningCheck(BaseModel):
+    status: VerificationStatus
+    explanation: str
+    evidence: list[str] = Field(default_factory=list)
+    measurements: dict[str, str | float | int | bool | None] = Field(default_factory=dict)
+
+
+class GovernmentWarningChecks(BaseModel):
+    presence: WarningCheck
+    wording: WarningCheck
+    heading_capitalization: WarningCheck
+    heading_boldness: WarningCheck
+    body_not_bold: WarningCheck
+    continuous_statement: WarningCheck
+    separation: WarningCheck
+    legibility_contrast: WarningCheck
+    type_size: WarningCheck
+    characters_per_inch: WarningCheck
+
+
+class GovernmentWarningAnalysis(BaseModel):
+    overall_status: VerificationStatus
+    localized_text: str | None
+    source_lines: list[str] = Field(default_factory=list)
+    bounding_box: WarningBoundingBox | None
+    mean_ocr_confidence: float | None = Field(default=None, ge=0, le=1)
+    analysis_duration_ms: float = Field(ge=0)
+    checks: GovernmentWarningChecks
+
+
 class LabelVerificationResponse(BaseModel):
     expected: ApplicationData
     candidates: ExtractedCandidates
     results: VerificationResults
+    government_warning: GovernmentWarningAnalysis
     overall_summary: str
     raw_text: str
     engine: str

@@ -1,7 +1,7 @@
 from io import BytesIO
 
 import pytest
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from app.core.config import Settings
 from app.core.errors import ApiError
@@ -36,6 +36,10 @@ def test_preprocessing_normalizes_orientation_grayscale_and_small_image(settings
         assert image.format == "PNG"
         assert image.mode == "L"
         assert image.size == (500, 1000)
+    with Image.open(BytesIO(prepared.visual_evidence_data)) as image:
+        assert image.format == "PNG"
+        assert image.mode == "RGB"
+        assert image.size == (500, 1000)
 
 
 def test_preprocessing_rejects_mime_content_mismatch(settings: Settings):
@@ -48,6 +52,22 @@ def test_preprocessing_rejects_mime_content_mismatch(settings: Settings):
 
     assert error.value.status_code == 415
     assert error.value.code == "unsupported_file_type"
+
+
+def test_visual_evidence_preserves_submitted_contrast_before_ocr_enhancement(
+    settings: Settings,
+):
+    image = Image.new("RGB", (1600, 500), (160, 160, 160))
+    ImageDraw.Draw(image).rectangle((100, 100, 800, 300), fill=(140, 140, 140))
+    output = BytesIO()
+    image.save(output, format="PNG")
+
+    prepared = prepare_image(output.getvalue(), content_type="image/png", settings=settings)
+
+    with Image.open(BytesIO(prepared.data)) as ocr_image:
+        assert ocr_image.getextrema() == (0, 255)
+    with Image.open(BytesIO(prepared.visual_evidence_data)) as visual_image:
+        assert visual_image.convert("L").getextrema() == (140, 160)
 
 
 def test_preprocessing_rejects_excessive_dimensions(settings: Settings):

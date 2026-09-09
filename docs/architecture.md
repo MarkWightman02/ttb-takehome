@@ -2,7 +2,7 @@
 
 ## Scope and boundaries
 
-The foundation, local OCR, and core application-data verification slices of the [specified prototype](https://github.com/treasurytakehome-rgb/instructions) are implemented. The primary flow is React application fields and image selection → `POST /api/labels/verify` → validation → preprocessing → one local Tesseract invocation → structured extraction → comparison → typed field results. `POST /api/labels/ocr` remains available for direct raw OCR. Product requirements and sources are tracked in [requirements.md](requirements.md).
+The foundation, local OCR, core application-data verification, and Government Health Warning analysis slices of the [specified prototype](https://github.com/treasurytakehome-rgb/instructions) are implemented. The primary flow is React application fields and image selection → `POST /api/labels/verify` → validation → preprocessing → one local Tesseract invocation → structured extraction → application comparison and warning analysis → typed results. `POST /api/labels/ocr` remains available for direct raw OCR. Product requirements and sources are tracked in [requirements.md](requirements.md).
 
 React, TypeScript, and Vite own presentation in `frontend/`. FastAPI and Pydantic own the API and typed contracts in `backend/app/`. API routing, response models, service interfaces, and configuration/error handling have separate modules. There is no database or additional service infrastructure.
 
@@ -14,15 +14,31 @@ Both label endpoints share the same bounded upload, Pillow validation, worker-th
 
 ## Extraction and comparison
 
-`OcrService` in `services/ocr.py` remains the replaceable extraction boundary: async `extract(image: bytes, *, media_type: str) -> OcrResult`. `TesseractOcrService` implements it with a shell-free subprocess call to local Tesseract. The result carries original-case text, image dimensions, engine name, OCR duration, warnings, and the existing future text-region structure. Tests inject a stub provider, so the unit suite does not depend on a system binary.
+`OcrService` in `services/ocr.py` remains the replaceable extraction boundary: async `extract(image: bytes, *, media_type: str) -> OcrResult`. `TesseractOcrService` implements it with one shell-free subprocess call to local Tesseract in TSV mode. The provider reconstructs raw text while retaining each word's confidence, page, block, paragraph, line, word identifier, and pixel bounding box. Tests inject a stub provider, so ordinary unit tests do not depend on a system binary; conditional smoke tests exercise real Tesseract.
 
 Pillow checks declared MIME type against decoded PNG, JPEG, or WebP content, rejects animated or excessive images, applies EXIF orientation, converts to grayscale, normalizes contrast, enlarges small images by at most 2× toward a 1,600-pixel long edge, and applies light sharpening. Hard thresholding is intentionally omitted because it can erase fine text over label artwork. Low-resolution and empty-result warnings are returned to the user.
+
+Preprocessing also retains an in-memory visual-evidence PNG after orientation and coordinate-aligned resizing but before OCR-specific autocontrast and sharpening. Warning geometry therefore aligns with Tesseract coordinates while contrast analysis observes the submitted tonal relationships rather than contrast manufactured for OCR. Both images remain request-scoped.
 
 Structured extraction, normalization, and comparison are separate modules and do not depend on HTTP. Extraction preserves original candidate lines and line numbers. ABV and metric volume use explicit patterns and normalize to percentage and milliliters. Class/type detection uses a small generic cue set rather than a purported regulatory taxonomy. Brand detection examines several early meaningful lines while excluding regulatory, numeric, volume, ABV, and obvious class/type lines.
 
 Text comparison applies Unicode compatibility normalization, case folding, whitespace collapse, conservative punctuation handling, and apostrophe equivalence. Exact normalized equality is a match. Established sequence similarity is used only to identify conservative manual-review cases; lower similarity is a mismatch. ABV and volume comparisons are exact after numeric normalization. Distinct multiple numeric candidates always produce `review`, even when one candidate matches, because their context cannot yet be resolved reliably. No candidate produces `not_found`, not an HTTP error.
 
 Responses return supplied values, observed and normalized values, source evidence, status, and a plain-language explanation. **Plain OCR text cannot establish bold styling. Missing or uncertain image/style evidence must require review, not produce a claimed compliance pass.** Field results and overall summaries are decision support, not legal approval or rejection.
+
+## Government Warning analysis
+
+The canonical statement is defined once in `services/government_warning_rules.py` from [27 CFR 16.21](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.21). Presentation and physical tiers come from [27 CFR 16.22](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.22); the continuous-statement interpretation is also stated in [TTB's current guidance](https://www.ttb.gov/regulated-commodities/beverage-alcohol/beer/labeling/malt-beverage-health-warning).
+
+`government_warning.py` is independent of HTTP and generic field comparison. It localizes a likely statement using the heading and distinctive clause text, preserving words, source lines, mean confidence, and the union bounding region. Raw-text fallback can assess wording but deliberately leaves geometric and visual checks at `review`.
+
+Text comparison preserves clause order, numbered portions, words, and material punctuation. Only OCR-safe Unicode and wrapping differences are ignored. Known character confusions are `review`; missing or altered content is `mismatch`. Heading capitalization is separate from visual weight.
+
+Visual-weight analysis crops word boxes from the already preprocessed in-memory image. It compares median foreground stroke indices, dark-pixel density, and glyph height between the heading and body. This relative evidence avoids a universal dark-pixel threshold. Sufficiently heavier heading strokes may support `match`; similar, reversed, tiny, or incomplete evidence becomes `review` or `mismatch` conservatively. It does not identify font files or claim that OCR text proves boldness.
+
+Continuity examines numbered-clause order, unexpected inserted words, OCR hierarchy, and unusually large interline gaps; line wrapping alone is accepted. Separation measures nearby OCR geometry and whitespace but does not equate a bounding-box gap with legal compliance. Contrast analysis combines foreground/background luminance separation, background variance, and OCR confidence. Complex or weak evidence requires review.
+
+Container volume selects the 1/2/3 mm and 40/25/12 CPI regulatory tiers. Physical size and CPI remain `review` because normal raster artwork provides no trustworthy scale. The implementation does not convert arbitrary DPI metadata or pixel counts into physical measurements. This is consistent with [TTB's warning about distortions in submitted label images](https://www.ttb.gov/public-information/industry-circulars/archives/2011/11-04).
 
 The specification lists common fields but does not define a complete rule set for every beverage. Before implementing those rules, verify applicable TTB primary sources, document beverage-specific exceptions, and add representative fixtures. Do not turn the common-field list into unconditional requirements or guess regulatory tolerances.
 
@@ -44,4 +60,4 @@ A multi-stage Dockerfile builds React with Node and installs Python dependencies
 
 Docker Compose deliberately runs separate frontend and backend development services for hot reload. This does not change the single-container production target. Versions are pinned in package manifests, the pnpm lockfile, Python constraints, and base-image tags. Tags can receive image rebuilds; digest pinning and image publication remain deployment work.
 
-The absence of application persistence simplifies retention and keeps the prototype standalone. Authentication, COLAs Online integration, Government Warning validation, batch processing, and production governance are outside this slice. Tesseract currently uses English and page-segmentation mode 6, returns no word-level confidence or style evidence, and may struggle with curved, reflective, stylized, or poorly photographed labels. Deterministic candidate extraction is intentionally limited and may produce review or not-found outcomes on unusual layouts. A deployed reviewer URL remains a final-product deliverable.
+The absence of application persistence simplifies retention and keeps the prototype standalone. Authentication, COLAs Online integration, batch processing, and production governance are outside this slice. Tesseract currently uses English and page-segmentation mode 6 and may struggle with curved, reflective, stylized, or poorly photographed labels. OCR confidence and local image heuristics are evidence rather than proof of typeface, physical dimensions, contrast under ordinary conditions, or final compliance. Deterministic extraction may produce review or not-found outcomes on unusual layouts. A deployed reviewer URL remains a final-product deliverable.

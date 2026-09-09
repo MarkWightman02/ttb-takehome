@@ -3,6 +3,7 @@ import {
   fireEvent,
   render,
   screen,
+  within,
   waitFor,
 } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -13,6 +14,50 @@ const labelFile = new File([new Uint8Array([1, 2, 3])], 'bourbon-label.png', {
 });
 
 type Status = 'match' | 'review' | 'mismatch' | 'not_found';
+
+function warningCheck(status: Status, explanation: string) {
+  return { status, explanation, evidence: [], measurements: {} };
+}
+
+const warningChecks = {
+  presence: warningCheck('match', 'A likely Government Warning was located.'),
+  wording: warningCheck(
+    'match',
+    'The extracted warning matches the prescribed wording.',
+  ),
+  heading_capitalization: warningCheck(
+    'match',
+    'OCR preserves the heading as uppercase “GOVERNMENT WARNING.”',
+  ),
+  heading_boldness: warningCheck(
+    'review',
+    'Font weight requires manual confirmation because visual evidence is borderline.',
+  ),
+  body_not_bold: warningCheck(
+    'review',
+    'Body font weight requires manual confirmation.',
+  ),
+  continuous_statement: warningCheck(
+    'match',
+    'Both numbered portions occur in sequence within one OCR block.',
+  ),
+  separation: warningCheck(
+    'review',
+    'Separate-and-apart presentation requires manual review.',
+  ),
+  legibility_contrast: warningCheck(
+    'review',
+    'Contrast requires reviewer confirmation.',
+  ),
+  type_size: warningCheck(
+    'review',
+    'A minimum type size of 2 mm applies, but pixels do not establish physical size.',
+  ),
+  characters_per_inch: warningCheck(
+    'review',
+    'The applicable limit is 25 characters per inch; physical scale is unavailable.',
+  ),
+};
 
 function fieldResult(
   field: 'brand_name' | 'class_type' | 'abv' | 'net_contents',
@@ -63,6 +108,24 @@ const successfulPayload = {
     ),
     abv: fieldResult('abv', 'match', '45%', '45% Alc./Vol.'),
     net_contents: fieldResult('net_contents', 'match', '750 mL', '750 mL'),
+  },
+  government_warning: {
+    overall_status: 'review' as const,
+    localized_text:
+      'GOVERNMENT WARNING: (1) According to the Surgeon General ... (2) Consumption ...',
+    source_lines: [
+      'GOVERNMENT WARNING: (1) According to the Surgeon General ...',
+    ],
+    bounding_box: {
+      left: 40,
+      top: 220,
+      width: 710,
+      height: 130,
+      coordinate_space: 'preprocessed_image' as const,
+    },
+    mean_ocr_confidence: 0.92,
+    analysis_duration_ms: 12,
+    checks: warningChecks,
   },
   overall_summary: 'All checked application fields match the label.',
   raw_text:
@@ -147,7 +210,11 @@ describe('label verification workflow', () => {
         'All checked application fields match the label.',
       ),
     ).toBeVisible();
-    expect(screen.getAllByText('Match')).toHaveLength(4);
+    expect(
+      within(screen.getByLabelText('Application field results')).getAllByText(
+        'Match',
+      ),
+    ).toHaveLength(4);
     expect(screen.getAllByText('Brand name')).toHaveLength(2);
     expect(screen.getByText('Alcohol content / ABV')).toBeVisible();
     expect(screen.getByText('Inspect raw OCR evidence')).toBeVisible();
@@ -191,11 +258,117 @@ describe('label verification workflow', () => {
         'One or more application fields do not match the label.',
       ),
     ).toBeVisible();
-    expect(screen.getByText('Review')).toBeVisible();
-    expect(screen.getByText('Mismatch')).toBeVisible();
-    expect(screen.getByText('Not found')).toBeVisible();
+    const fieldResults = screen.getByLabelText('Application field results');
+    expect(within(fieldResults).getByText('Review')).toBeVisible();
+    expect(within(fieldResults).getByText('Mismatch')).toBeVisible();
+    expect(within(fieldResults).getByText('Not found')).toBeVisible();
     expect(screen.getByText('Not detected')).toBeVisible();
     expect(screen.getAllByText(/manual review/i).length).toBeGreaterThan(0);
+  });
+
+  it('renders accessible Government Warning component results and evidence', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue({ ok: true, json: async () => successfulPayload }),
+    );
+    render(<LabelOcrWorkflow />);
+    completeForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Label' }));
+
+    const warning = await screen.findByRole('region', {
+      name: 'Government Health Warning',
+    });
+    expect(within(warning).getByText('Warning found')).toBeVisible();
+    expect(within(warning).getByText('Required wording')).toBeVisible();
+    expect(within(warning).getByText('Heading boldness')).toBeVisible();
+    expect(
+      within(warning).getByText('Legibility / contrasting background'),
+    ).toBeVisible();
+    expect(within(warning).getByText('Type-size requirement')).toBeVisible();
+    expect(
+      within(warning).getByText('Maximum characters per inch'),
+    ).toBeVisible();
+    expect(
+      within(warning).getAllByText(/trustworthy scale/i).length,
+    ).toBeGreaterThan(0);
+    fireEvent.click(
+      within(warning).getByText('Inspect localized warning evidence'),
+    );
+    expect(within(warning).getByText(/GOVERNMENT WARNING:/)).toBeVisible();
+    expect(within(warning).getByText(/Mean OCR confidence 92%/)).toBeVisible();
+  });
+
+  it('shows warning wording and capitalization mismatches as text', async () => {
+    const payload = {
+      ...successfulPayload,
+      government_warning: {
+        ...successfulPayload.government_warning,
+        overall_status: 'mismatch' as const,
+        localized_text: 'Government Warning: altered wording',
+        checks: {
+          ...warningChecks,
+          wording: warningCheck(
+            'mismatch',
+            'The extracted warning has missing or changed text.',
+          ),
+          heading_capitalization: warningCheck(
+            'mismatch',
+            'OCR represents the heading in mixed case.',
+          ),
+        },
+      },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => payload }),
+    );
+    render(<LabelOcrWorkflow />);
+    completeForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Label' }));
+
+    const warning = await screen.findByRole('region', {
+      name: 'Government Health Warning',
+    });
+    expect(within(warning).getAllByText('Mismatch')).toHaveLength(3);
+    expect(within(warning).getByText(/missing or changed text/i)).toBeVisible();
+    expect(within(warning).getByText(/mixed case/i)).toBeVisible();
+  });
+
+  it('renders a warning-not-found state without hiding application results', async () => {
+    const missingChecks = Object.fromEntries(
+      Object.keys(warningChecks).map((name) => [
+        name,
+        warningCheck(
+          'not_found',
+          'No reliable Government Warning evidence was located.',
+        ),
+      ]),
+    );
+    const payload = {
+      ...successfulPayload,
+      government_warning: {
+        ...successfulPayload.government_warning,
+        overall_status: 'not_found' as const,
+        localized_text: null,
+        bounding_box: null,
+        checks: missingChecks,
+      },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => payload }),
+    );
+    render(<LabelOcrWorkflow />);
+    completeForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Label' }));
+
+    const warning = await screen.findByRole('region', {
+      name: 'Government Health Warning',
+    });
+    expect(within(warning).getAllByText('Not found').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Application field results')).toBeVisible();
   });
 
   it('shows a typed API error and moves focus to it', async () => {

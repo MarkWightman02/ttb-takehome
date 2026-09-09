@@ -400,6 +400,74 @@ h2 {
   margin-bottom: 0;
   color: #455468;
 }
+.government-warning-results {
+  margin-top: 1.5rem;
+  border-top: 2px solid #9aa8b7;
+  padding-top: 1.25rem;
+}
+.warning-section-heading,
+.warning-check-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.warning-section-heading h3,
+.warning-check-heading h4 {
+  margin: 0;
+  color: #243b53;
+}
+.warning-section-heading > .status-label.status-match {
+  color: #286340;
+}
+.warning-section-heading > .status-label.status-review,
+.warning-section-heading > .status-label.status-not_found {
+  color: #795000;
+}
+.warning-section-heading > .status-label.status-mismatch {
+  color: #8b3d23;
+}
+.warning-limit-note {
+  max-width: 75ch;
+  color: #455468;
+}
+.warning-checks {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.warning-check {
+  padding: 0.85rem;
+  border: 1px solid #c3ccd5;
+  border-left-width: 4px;
+  border-radius: 3px;
+  background: #fff;
+}
+.warning-check.status-match {
+  border-left-color: #286340;
+}
+.warning-check.status-review,
+.warning-check.status-not_found {
+  border-left-color: #a56a00;
+}
+.warning-check.status-mismatch {
+  border-left-color: #a43f24;
+}
+.warning-check-heading h4 {
+  font-size: 0.95rem;
+}
+.warning-check > p {
+  margin-bottom: 0;
+  color: #455468;
+}
+.localized-warning-evidence {
+  margin-top: 1rem;
+}
+.localized-warning-evidence summary {
+  color: #234d76;
+  font-weight: 700;
+  cursor: pointer;
+}
 .ocr-evidence {
   margin-top: 1.25rem;
   border-top: 1px solid #ccd4de;
@@ -499,7 +567,8 @@ h2 {
     grid-template-columns: 1fr;
   }
   .application-fields,
-  .field-results {
+  .field-results,
+  .warning-checks {
     grid-template-columns: 1fr;
   }
   .step-card {

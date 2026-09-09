@@ -70,6 +70,18 @@ def test_brand_and_class_candidates_use_filtered_lines():
     ]
 
 
+def test_government_warning_body_is_not_a_brand_candidate():
+    candidates = extract_candidates(
+        "OLD TOM DISTILLERY\n"
+        "GOVERNMENT WARNING:\n"
+        "(1) According to the Surgeon General, women should not drink alcoholic beverages\n"
+        "during pregnancy because of the risk of birth defects.\n"
+        "(2) Consumption of alcoholic beverages impairs your ability to drive a car or\n"
+        "operate machinery, and may cause health problems."
+    )
+    assert [candidate.raw_value for candidate in candidates.brand_name] == ["OLD TOM DISTILLERY"]
+
+
 def test_brand_extraction_does_not_blindly_use_first_line():
     candidates = extract_candidates("45% ABV\nStone's Throw\nVodka\n750 mL")
     assert candidates.brand_name[0].raw_value == "Stone's Throw"

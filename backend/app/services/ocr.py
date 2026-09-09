@@ -18,6 +18,11 @@ class TextRegion:
     bounding_box: BoundingBox | None = None
     confidence: float | None = None  # 0–1 when supported by the engine.
     is_bold: bool | None = None  # Unknown is distinct from false; plain OCR cannot prove boldness.
+    page_id: int | None = None
+    block_id: int | None = None
+    paragraph_id: int | None = None
+    line_id: int | None = None
+    word_id: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

@@ -2,7 +2,7 @@
 
 A standalone prototype for extracting text from alcohol-label artwork and comparing core fields with expected application data. The [take-home specification](https://github.com/treasurytakehome-rgb/instructions), including its stakeholder interviews, defines the intended product.
 
-**Current status: single-label application-data verification.** The React UI accepts expected brand, class/type, ABV, and net contents plus one PNG, JPEG, or WebP label image. One primary action runs local OCR once, extracts deterministic candidates, and displays explainable field-level results. Raw OCR remains available as supporting evidence. Government Warning checks and final regulatory decisions are not implemented. No AI credentials are required.
+**Current status: single-label application-data and Government Health Warning verification.** The React UI accepts expected brand, class/type, ABV, and net contents plus one PNG, JPEG, or WebP label image. One primary action runs local OCR once, extracts deterministic candidates, compares application fields, and analyzes warning text and image evidence. Raw OCR remains available as supporting evidence. Results support reviewer decisions and do not constitute final regulatory approval. No AI credentials are required.
 
 ## Architecture
 
@@ -96,11 +96,11 @@ API documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Hea
 
 - Supported formats: PNG, JPEG, and WebP. File contents must match the declared MIME type; filename extensions are not trusted.
 - Limits: 10 MB, at most 12,000 pixels on either edge, and at most 40 million pixels total. These defaults are configurable through the documented `TTB_` settings.
-- Preprocessing: EXIF orientation correction, grayscale conversion, automatic contrast, up to 2× enlargement for small images, and light sharpening. The pipeline avoids hard thresholding that could erase label artwork.
+- Preprocessing: EXIF orientation correction, grayscale conversion, automatic contrast, up to 2× enlargement for small images, and light sharpening. The pipeline avoids hard thresholding that could erase label artwork. A separate request-scoped image preserves the original tonal evidence at the same orientation and scale for visual checks, so OCR contrast enhancement cannot create false contrast evidence.
 - Privacy: bytes remain request-scoped. FastAPI may spool multipart data to secure framework-managed temporary storage; the upload is closed in a `finally` block. The application sends the normalized image to Tesseract over standard input and creates no persistent label file.
-- Output: raw text, engine identifier, total and OCR processing duration, original image metadata, and useful warnings. Raw text is not a compliance decision.
+- Output: raw text, engine identifier, total and OCR processing duration, original image metadata, and useful warnings. Internally, the same Tesseract TSV response supplies word confidence, hierarchy, and pixel bounding boxes for warning analysis. Raw text is not a compliance decision.
 
-Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor photographs can reduce accuracy. This slice uses English Tesseract with page-segmentation mode 6 and does not report word-level confidence or label typography such as boldness.
+Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor photographs can reduce accuracy. This slice uses English Tesseract with page-segmentation mode 6. Word confidence and geometry are OCR evidence, not proof of typography or legal legibility.
 
 ### Verification endpoint and workflow
 
@@ -114,6 +114,20 @@ Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor p
 Brand and class/type comparison ignores capitalization, harmless punctuation, whitespace, Unicode presentation differences, and straight-versus-curly apostrophes. Conservative approximate text similarity can produce `review`, never `match`. ABV is compared as a percentage number without fuzzy matching. Metric net contents are converted to milliliters, so `1 L` and `1000 mL` match. Multiple distinct percentages or volumes require review even if one equals the expected value.
 
 Extraction is deliberately deterministic and conservative. It uses explicit ABV/metric-volume patterns, a small generic set of beverage cues for class/type candidates, and filtered early OCR lines for brand candidates. It does not infer proof, accept incompatible volume units, use an exhaustive beverage taxonomy, or manufacture values when text is uncertain. Results assist reviewers and do not constitute approval, rejection, or a legal-compliance determination.
+
+### Government Health Warning analysis
+
+The prescribed statement and presentation rules come from [27 CFR 16.21](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.21), [27 CFR 16.22](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.22), and [current TTB warning guidance](https://www.ttb.gov/regulated-commodities/beverage-alcohol/beer/labeling/malt-beverage-health-warning). The application reports separate results for presence, wording, heading capitalization, heading boldness, non-bold body text, continuity, separation, contrast/legibility, type size, and characters per inch.
+
+- Wording is compared deterministically with only Unicode, whitespace, line-wrap, and substantively equivalent typography normalization. Missing, changed, reordered, or materially punctuated text is not normalized away. Known OCR character damage produces `review`, never `match`.
+- Capitalization uses the original OCR representation. Plain OCR text does not prove boldness.
+- Warning location is derived from Tesseract words, hierarchy, confidence, and bounding boxes. The pixel crop is request-scoped and is not persisted.
+- Bold/non-bold evidence uses a conservative within-warning comparison of glyph stroke index and ink density. Similar weights, small text, missing coordinates, or weak image evidence return `review`.
+- Continuity and separation use clause order, OCR block/paragraph relationships, unexpected interruptions, bounding boxes, and surrounding whitespace. Normal line wrapping is allowed.
+- Contrast uses local luminance separation, background variation, and OCR quality. It is an estimate, not a legal legibility determination; gradients, artwork, glare, or uncertain evidence return `review`.
+- For containers up to 237 mL, over 237 mL through 3 L, and over 3 L, the reported minimum type sizes are respectively 1, 2, and 3 mm; maximum characters per inch are respectively 40, 25, and 12. Ordinary raster pixels do not establish physical millimeters or inches, so both actual-measurement checks remain `review` without a trustworthy physical scale.
+
+TTB has itself noted that submitted images can distort size, CPI, and contrast evidence; see [TTB Industry Circular 2011-04](https://www.ttb.gov/public-information/industry-circulars/archives/2011/11-04). The prototype therefore favors explicit manual review over false visual certainty.
 
 ### Run the frontend
 
@@ -186,8 +200,8 @@ docker compose run --rm backend python -m pytest -c backend/pyproject.toml backe
 docker compose run --rm frontend pnpm test
 ```
 
-The container supports both raw OCR and application-data verification. A hosted reviewer URL and additional regulatory checks remain future deliverables.
+The container supports raw OCR, application-data verification, and warning analysis. A hosted reviewer URL and additional beverage-dependent fields remain future deliverables.
 
 ## Next increment
 
-Add Government Warning wording verification as a separate, evidence-based vertical slice. Keep typography/boldness unknown unless reliable visual evidence exists, preserve manual-review outcomes for uncertain OCR, and confirm applicable TTB sources before encoding the rule. Batch processing and difficult-photo enhancement should remain later work.
+Add producer/bottler name and address extraction, followed by imported-product origin applicability, as a separate deterministic field-verification slice. Batch processing and difficult-photo enhancement should remain later work.

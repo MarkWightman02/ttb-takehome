@@ -1,6 +1,7 @@
 import asyncio
 import shutil
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from PIL import Image, ImageDraw, ImageFont
@@ -8,10 +9,30 @@ from PIL import Image, ImageDraw, ImageFont
 from app.core.config import Settings
 from app.models.verification import ApplicationData
 from app.services.comparison import compare_application_data
+from app.services.government_warning import analyze_government_warning
+from app.services.government_warning_rules import PRESCRIBED_GOVERNMENT_WARNING
 from app.services.image_preprocessing import prepare_image
 from app.services.ocr import OcrUnavailableError
 from app.services.structured_extraction import extract_candidates
-from app.services.tesseract import TesseractOcrService
+from app.services.tesseract import TesseractOcrService, _parse_tsv
+
+
+def test_tesseract_tsv_preserves_word_hierarchy_geometry_and_confidence():
+    output = (
+        "level\tpage_num\tblock_num\tpar_num\tline_num\tword_num\tleft\ttop\twidth\t"
+        "height\tconf\ttext\n"
+        "5\t1\t2\t3\t4\t1\t10\t20\t100\t30\t96.5\tGOVERNMENT\n"
+        "5\t1\t2\t3\t4\t2\t120\t20\t90\t30\t91.0\tWARNING:\n"
+    )
+
+    text, regions = _parse_tsv(output)
+
+    assert text == "GOVERNMENT WARNING:"
+    assert regions[0].bounding_box is not None
+    assert regions[0].bounding_box.left == 10
+    assert regions[0].confidence == pytest.approx(0.965)
+    assert (regions[0].page_id, regions[0].block_id) == (1, 2)
+    assert (regions[0].paragraph_id, regions[0].line_id, regions[0].word_id) == (3, 4, 1)
 
 
 def test_missing_tesseract_command_is_reported_as_unavailable():
@@ -93,3 +114,64 @@ def test_real_verification_pipeline_extracts_generated_application_fields():
     assert results.class_type.status == "match"
     assert results.abv.status == "match"
     assert results.net_contents.status == "match"
+
+
+@pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed")
+def test_real_tesseract_localizes_generated_government_warning():
+    regular_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    bold_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+    if not Path(regular_path).exists() or not Path(bold_path).exists():
+        pytest.skip("DejaVu fonts are unavailable")
+    image = Image.new("RGB", (2400, 1450), "white")
+    draw = ImageDraw.Draw(image)
+    title = ImageFont.truetype(bold_path, 72)
+    body = ImageFont.truetype(regular_path, 38)
+    heading = ImageFont.truetype(bold_path, 38)
+    draw.multiline_text(
+        (100, 70),
+        "OLD TOM DISTILLERY\nKentucky Straight Bourbon Whiskey\n45% ABV\n750 mL",
+        fill="black",
+        font=title,
+        spacing=25,
+    )
+    warning_y = 620
+    draw.text((100, warning_y), "GOVERNMENT WARNING:", fill="black", font=heading)
+    warning_lines = [
+        "(1) According to the Surgeon General, women should not drink alcoholic beverages",
+        "during pregnancy because of the risk of birth defects.",
+        "(2) Consumption of alcoholic beverages impairs your ability to drive a car or",
+        "operate machinery, and may cause health problems.",
+    ]
+    for line_number, line in enumerate(warning_lines, 1):
+        draw.text(
+            (100, warning_y + line_number * 65),
+            line,
+            fill="black",
+            font=body,
+        )
+    output = BytesIO()
+    image.save(output, format="PNG")
+    prepared = prepare_image(
+        output.getvalue(), content_type="image/png", settings=Settings(environment="test")
+    )
+    service = TesseractOcrService(
+        command=shutil.which("tesseract") or "tesseract",
+        language="eng",
+        timeout_seconds=5,
+    )
+
+    ocr_result = asyncio.run(service.extract(prepared.data, media_type="image/png"))
+    warning = analyze_government_warning(
+        ocr_result,
+        preprocessed_image=prepared.data,
+        container_volume_ml=750,
+    )
+
+    assert len(ocr_result.regions) > 20
+    assert warning.localized_text is not None
+    assert "GOVERNMENT WARNING" in warning.localized_text.upper()
+    assert warning.checks.presence.status == "match"
+    assert warning.checks.wording.status in {"match", "review"}
+    assert warning.checks.heading_capitalization.status == "match"
+    assert warning.bounding_box is not None
+    assert PRESCRIBED_GOVERNMENT_WARNING.startswith("GOVERNMENT WARNING:")

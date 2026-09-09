@@ -11,6 +11,7 @@ from app.models.errors import ErrorResponse
 from app.models.ocr import LabelOcrResponse, OcrImageMetadata
 from app.models.verification import ApplicationData, LabelVerificationResponse
 from app.services.comparison import compare_application_data, overall_summary
+from app.services.government_warning import analyze_government_warning
 from app.services.image_preprocessing import PreparedImage, normalize_media_type, prepare_image
 from app.services.normalization import normalize_volume
 from app.services.ocr import OcrProcessingError, OcrResult, OcrService, OcrUnavailableError
@@ -104,12 +105,18 @@ async def verify_label(
     processed = await _process_upload(request, upload)
     candidates = extract_candidates(processed.ocr_result.text)
     results = compare_application_data(expected, candidates)
+    warning = analyze_government_warning(
+        processed.ocr_result,
+        preprocessed_image=processed.prepared.visual_evidence_data,
+        container_volume_ml=normalize_volume(expected.net_contents),
+    )
     prepared = processed.prepared
     return LabelVerificationResponse(
         expected=expected,
         candidates=candidates,
         results=results,
-        overall_summary=overall_summary(results),
+        government_warning=warning,
+        overall_summary=overall_summary(results, warning),
         raw_text=processed.ocr_result.text,
         engine=processed.ocr_result.engine_name,
         total_verification_duration_ms=(perf_counter() - started) * 1_000,

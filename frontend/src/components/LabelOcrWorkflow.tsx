@@ -39,6 +39,41 @@ interface ExtractedCandidates {
   net_contents: (NumericCandidate & { normalized_ml: number })[];
 }
 
+type WarningCheckName =
+  | 'presence'
+  | 'wording'
+  | 'heading_capitalization'
+  | 'heading_boldness'
+  | 'body_not_bold'
+  | 'continuous_statement'
+  | 'separation'
+  | 'legibility_contrast'
+  | 'type_size'
+  | 'characters_per_inch';
+
+interface WarningCheck {
+  status: VerificationStatus;
+  explanation: string;
+  evidence: string[];
+  measurements: Record<string, string | number | boolean | null>;
+}
+
+interface GovernmentWarningAnalysis {
+  overall_status: VerificationStatus;
+  localized_text: string | null;
+  source_lines: string[];
+  bounding_box: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+    coordinate_space: 'preprocessed_image';
+  } | null;
+  mean_ocr_confidence: number | null;
+  analysis_duration_ms: number;
+  checks: Record<WarningCheckName, WarningCheck>;
+}
+
 interface FieldResult {
   field: FieldName;
   expected_raw: string;
@@ -55,6 +90,7 @@ interface VerificationResponse {
   expected: ExpectedApplicationData;
   candidates: ExtractedCandidates;
   results: Record<FieldName, FieldResult>;
+  government_warning: GovernmentWarningAnalysis;
   overall_summary: string;
   raw_text: string;
   engine: string;
@@ -93,6 +129,18 @@ const STATUS_LABELS: Record<VerificationStatus, string> = {
   review: 'Review',
   mismatch: 'Mismatch',
   not_found: 'Not found',
+};
+const WARNING_CHECK_LABELS: Record<WarningCheckName, string> = {
+  presence: 'Warning found',
+  wording: 'Required wording',
+  heading_capitalization: '“GOVERNMENT WARNING” capitalization',
+  heading_boldness: 'Heading boldness',
+  body_not_bold: 'Body text not bold',
+  continuous_statement: 'Continuous statement',
+  separation: 'Separation / layout',
+  legibility_contrast: 'Legibility / contrasting background',
+  type_size: 'Type-size requirement',
+  characters_per_inch: 'Maximum characters per inch',
 };
 
 export function LabelOcrWorkflow() {
@@ -460,7 +508,7 @@ function VerificationResults({
       <div className="overall-summary" role="status" aria-live="polite">
         <strong>{result.overall_summary}</strong>
       </div>
-      <div className="field-results">
+      <div className="field-results" aria-label="Application field results">
         {(Object.keys(FIELD_LABELS) as FieldName[]).map((field) => {
           const fieldResult = result.results[field];
           return (
@@ -489,6 +537,7 @@ function VerificationResults({
           );
         })}
       </div>
+      <GovernmentWarningResults warning={result.government_warning} />
       <details className="ocr-evidence">
         <summary>Inspect raw OCR evidence</summary>
         <div className="result-summary" aria-label="OCR processing details">
@@ -520,6 +569,69 @@ function VerificationResults({
   );
 }
 
+function GovernmentWarningResults({
+  warning,
+}: {
+  warning: GovernmentWarningAnalysis;
+}) {
+  return (
+    <section
+      className="government-warning-results"
+      aria-labelledby="government-warning-title"
+    >
+      <div className="warning-section-heading">
+        <h3 id="government-warning-title">Government Health Warning</h3>
+        <span className={`status-label status-${warning.overall_status}`}>
+          {STATUS_LABELS[warning.overall_status]}
+        </span>
+      </div>
+      <p className="warning-limit-note">
+        Text checks use OCR evidence. Visual checks are conservative estimates;
+        physical type size and characters per inch require a trustworthy scale.
+      </p>
+      <div className="warning-checks">
+        {(Object.keys(WARNING_CHECK_LABELS) as WarningCheckName[]).map(
+          (name) => {
+            const check = warning.checks[name];
+            return (
+              <article
+                className={`warning-check status-${check.status}`}
+                key={name}
+              >
+                <div className="warning-check-heading">
+                  <h4>{WARNING_CHECK_LABELS[name]}</h4>
+                  <span className="status-label">
+                    {STATUS_LABELS[check.status]}
+                  </span>
+                </div>
+                <p>{check.explanation}</p>
+              </article>
+            );
+          },
+        )}
+      </div>
+      {warning.localized_text && (
+        <details className="localized-warning-evidence">
+          <summary>Inspect localized warning evidence</summary>
+          <p>
+            Analysis completed in {formatDuration(warning.analysis_duration_ms)}
+            {warning.mean_ocr_confidence !== null
+              ? ` · Mean OCR confidence ${Math.round(warning.mean_ocr_confidence * 100)}%`
+              : ' · OCR confidence unavailable'}
+          </p>
+          {warning.bounding_box && (
+            <p>
+              OCR region: {warning.bounding_box.width} ×{' '}
+              {warning.bounding_box.height} pixels in the preprocessed image
+            </p>
+          )}
+          <pre className="raw-text">{warning.localized_text}</pre>
+        </details>
+      )}
+    </section>
+  );
+}
+
 function isVerificationResponse(
   payload: unknown,
 ): payload is VerificationResponse {
@@ -531,6 +643,8 @@ function isVerificationResponse(
     typeof candidate.engine !== 'string' ||
     typeof candidate.total_verification_duration_ms !== 'number' ||
     typeof candidate.ocr_duration_ms !== 'number' ||
+    typeof candidate.government_warning !== 'object' ||
+    candidate.government_warning === null ||
     typeof candidate.results !== 'object' ||
     candidate.results === null
   ) {
