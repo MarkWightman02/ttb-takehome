@@ -12,7 +12,7 @@ from app.services.comparison import compare_application_data
 from app.services.government_warning import analyze_government_warning
 from app.services.government_warning_rules import PRESCRIBED_GOVERNMENT_WARNING
 from app.services.image_preprocessing import prepare_image
-from app.services.ocr import OcrUnavailableError
+from app.services.ocr import OcrProcessingError, OcrUnavailableError
 from app.services.structured_extraction import extract_candidates
 from app.services.tesseract import TesseractOcrService, _parse_tsv
 
@@ -48,6 +48,40 @@ def test_missing_tesseract_command_is_reported_as_unavailable():
         asyncio.run(service.extract(output.getvalue(), media_type="image/png"))
 
 
+def test_tesseract_timeout_terminates_process_and_returns_processing_error(monkeypatch):
+    output = BytesIO()
+    Image.new("L", (20, 20), "white").save(output, format="PNG")
+
+    class SlowProcess:
+        returncode = None
+        killed = False
+
+        async def communicate(self, image: bytes):
+            del image
+            await asyncio.sleep(60)
+
+        def kill(self):
+            self.killed = True
+            self.returncode = -9
+
+        async def wait(self):
+            return self.returncode
+
+    process = SlowProcess()
+
+    async def create_slow_process(*args, **kwargs):
+        del args, kwargs
+        return process
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", create_slow_process)
+    service = TesseractOcrService(command="tesseract", language="eng", timeout_seconds=0.001)
+
+    with pytest.raises(OcrProcessingError, match="timed out"):
+        asyncio.run(service.extract(output.getvalue(), media_type="image/png"))
+
+    assert process.killed is True
+
+
 @pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed")
 def test_real_tesseract_extracts_generated_label_text():
     image = Image.new("L", (1400, 300), "white")
@@ -75,11 +109,12 @@ def test_real_tesseract_extracts_generated_label_text():
 
 @pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed")
 def test_real_verification_pipeline_extracts_generated_application_fields():
-    image = Image.new("RGB", (1800, 750), "white")
+    image = Image.new("RGB", (1800, 1100), "white")
     draw = ImageDraw.Draw(image)
     draw.multiline_text(
         (80, 60),
-        "OLD TOM DISTILLERY\nKentucky Straight Bourbon Whiskey\n45% ABV\n750 mL",
+        "OLD TOM DISTILLERY\nKentucky Straight Bourbon Whiskey\n45% ABV\n750 mL\n"
+        "BOTTLED BY OLD TOM DISTILLERY LLC\nLOUISVILLE, KY\nPRODUCT OF FRANCE",
         fill="black",
         font=ImageFont.load_default(size=72),
         spacing=35,
@@ -103,6 +138,10 @@ def test_real_verification_pipeline_extracts_generated_application_fields():
             class_type="Kentucky Straight Bourbon Whiskey",
             abv=45,
             net_contents="750 mL",
+            producer_name="Old Tom Distillery LLC",
+            producer_address="Louisville, Kentucky",
+            imported_product=True,
+            country_origin="France",
         ),
         candidates,
     )
@@ -114,6 +153,9 @@ def test_real_verification_pipeline_extracts_generated_application_fields():
     assert results.class_type.status == "match"
     assert results.abv.status == "match"
     assert results.net_contents.status == "match"
+    assert results.producer_name.status == "match"
+    assert results.producer_address.status == "match"
+    assert results.country_origin.status == "match"
 
 
 @pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed")

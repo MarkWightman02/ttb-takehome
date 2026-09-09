@@ -2,14 +2,26 @@ import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, FormEvent, RefObject } from 'react';
 
 type WorkflowState = 'idle' | 'loading' | 'success' | 'error';
-type VerificationStatus = 'match' | 'review' | 'mismatch' | 'not_found';
-type FieldName = 'brand_name' | 'class_type' | 'abv' | 'net_contents';
+type VerificationStatus =
+  'match' | 'review' | 'mismatch' | 'not_found' | 'not_applicable';
+type FieldName =
+  | 'brand_name'
+  | 'class_type'
+  | 'abv'
+  | 'net_contents'
+  | 'producer_name'
+  | 'producer_address'
+  | 'country_origin';
 
 interface ApplicationValues {
   brand_name: string;
   class_type: string;
   abv: string;
   net_contents: string;
+  producer_name: string;
+  producer_address: string;
+  imported_product: boolean;
+  country_origin: string;
 }
 
 interface ExpectedApplicationData {
@@ -17,6 +29,10 @@ interface ExpectedApplicationData {
   class_type: string;
   abv: number;
   net_contents: string;
+  producer_name: string;
+  producer_address: string;
+  imported_product: boolean;
+  country_origin: string | null;
 }
 
 interface TextCandidate {
@@ -37,6 +53,9 @@ interface ExtractedCandidates {
   class_type: TextCandidate[];
   abv: (NumericCandidate & { normalized_percent: number })[];
   net_contents: (NumericCandidate & { normalized_ml: number })[];
+  producer_name: TextCandidate[];
+  producer_address: TextCandidate[];
+  country_origin: TextCandidate[];
 }
 
 type WarningCheckName =
@@ -78,7 +97,7 @@ interface FieldResult {
   field: FieldName;
   expected_raw: string;
   extracted_raw: string | null;
-  expected_normalized: string | number;
+  expected_normalized: string | number | null;
   extracted_normalized: string | number | null;
   status: VerificationStatus;
   explanation: string;
@@ -117,18 +136,33 @@ const INITIAL_VALUES: ApplicationValues = {
   class_type: '',
   abv: '',
   net_contents: '',
+  producer_name: '',
+  producer_address: '',
+  imported_product: false,
+  country_origin: '',
 };
 const FIELD_LABELS: Record<FieldName, string> = {
   brand_name: 'Brand name',
   class_type: 'Class/type',
   abv: 'Alcohol content / ABV',
   net_contents: 'Net contents',
+  producer_name: 'Producer / bottler name',
+  producer_address: 'Producer / bottler address',
+  country_origin: 'Country of origin',
 };
 const STATUS_LABELS: Record<VerificationStatus, string> = {
   match: 'Match',
   review: 'Review',
   mismatch: 'Mismatch',
   not_found: 'Not found',
+  not_applicable: 'Not applicable',
+};
+const STATUS_COUNT_LABELS: Record<VerificationStatus, string> = {
+  match: 'matched',
+  review: 'review',
+  mismatch: 'mismatched',
+  not_found: 'not found',
+  not_applicable: 'not applicable',
 };
 const WARNING_CHECK_LABELS: Record<WarningCheckName, string> = {
   presence: 'Warning found',
@@ -142,6 +176,39 @@ const WARNING_CHECK_LABELS: Record<WarningCheckName, string> = {
   type_size: 'Type-size requirement',
   characters_per_inch: 'Maximum characters per inch',
 };
+const WARNING_CHECK_GROUPS: {
+  id: string;
+  title: string;
+  description: string;
+  checks: WarningCheckName[];
+}[] = [
+  {
+    id: 'warning-text-checks',
+    title: 'Deterministic text checks',
+    description: 'Direct checks against the wording recognized by OCR.',
+    checks: ['presence', 'wording', 'heading_capitalization'],
+  },
+  {
+    id: 'warning-image-checks',
+    title: 'Image-based evidence',
+    description:
+      'Conservative signals from OCR location, layout, weight, and contrast.',
+    checks: [
+      'heading_boldness',
+      'body_not_bold',
+      'continuous_statement',
+      'separation',
+      'legibility_contrast',
+    ],
+  },
+  {
+    id: 'warning-physical-checks',
+    title: 'Manual physical confirmation',
+    description:
+      'A digital image without trustworthy scale cannot establish physical measurements.',
+    checks: ['type_size', 'characters_per_inch'],
+  },
+];
 
 export function LabelOcrWorkflow() {
   const [application, setApplication] =
@@ -168,6 +235,17 @@ export function LabelOcrWorkflow() {
 
   function updateApplication(field: keyof ApplicationValues, value: string) {
     setApplication((current) => ({ ...current, [field]: value }));
+    setResult(null);
+    setError(null);
+    setState('idle');
+  }
+
+  function updateImportedProduct(imported: boolean) {
+    setApplication((current) => ({
+      ...current,
+      imported_product: imported,
+      country_origin: imported ? current.country_origin : '',
+    }));
     setResult(null);
     setError(null);
     setState('idle');
@@ -227,8 +305,21 @@ export function LabelOcrWorkflow() {
       setState('error');
       return;
     }
-    if (Object.values(application).some((value) => !value.trim())) {
-      setError('Enter all four application fields before verifying the label.');
+    const requiredValues = [
+      application.brand_name,
+      application.class_type,
+      application.abv,
+      application.net_contents,
+      application.producer_name,
+      application.producer_address,
+    ];
+    if (
+      requiredValues.some((value) => !value.trim()) ||
+      (application.imported_product && !application.country_origin.trim())
+    ) {
+      setError(
+        'Enter all required application fields before verifying the label.',
+      );
       setState('error');
       return;
     }
@@ -241,6 +332,12 @@ export function LabelOcrWorkflow() {
     formData.append('class_type', application.class_type);
     formData.append('abv', application.abv);
     formData.append('net_contents', application.net_contents);
+    formData.append('producer_name', application.producer_name);
+    formData.append('producer_address', application.producer_address);
+    formData.append('imported_product', String(application.imported_product));
+    if (application.imported_product) {
+      formData.append('country_origin', application.country_origin);
+    }
     formData.append('file', selectedFile);
 
     try {
@@ -322,6 +419,61 @@ export function LabelOcrWorkflow() {
                 onChange={(value) => updateApplication('net_contents', value)}
                 disabled={state === 'loading'}
               />
+              <TextField
+                id="producer-name"
+                label="Producer / bottler name"
+                value={application.producer_name}
+                placeholder="Old Tom Distillery LLC"
+                onChange={(value) => updateApplication('producer_name', value)}
+                disabled={state === 'loading'}
+              />
+              <TextField
+                id="producer-address"
+                label="Producer / bottler address"
+                value={application.producer_address}
+                placeholder="Louisville, KY"
+                onChange={(value) =>
+                  updateApplication('producer_address', value)
+                }
+                disabled={state === 'loading'}
+              />
+              <fieldset className="import-control">
+                <legend>Imported product</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="imported-product"
+                    value="no"
+                    checked={!application.imported_product}
+                    onChange={() => updateImportedProduct(false)}
+                    disabled={state === 'loading'}
+                  />
+                  No
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="imported-product"
+                    value="yes"
+                    checked={application.imported_product}
+                    onChange={() => updateImportedProduct(true)}
+                    disabled={state === 'loading'}
+                  />
+                  Yes
+                </label>
+              </fieldset>
+              {application.imported_product && (
+                <TextField
+                  id="country-origin"
+                  label="Country of origin"
+                  value={application.country_origin}
+                  placeholder="France"
+                  onChange={(value) =>
+                    updateApplication('country_origin', value)
+                  }
+                  disabled={state === 'loading'}
+                />
+              )}
             </div>
           </section>
         </li>
@@ -382,7 +534,7 @@ export function LabelOcrWorkflow() {
               Verify label
             </StepHeading>
             <p>
-              Run local OCR once, then compare the four application fields with
+              Run local OCR once, then compare the application fields with
               extracted label evidence.
             </p>
             {error && (
@@ -503,10 +655,27 @@ function VerificationResults({
   result: VerificationResponse;
   resultRef: RefObject<HTMLDivElement | null>;
 }) {
+  const statusCounts = (Object.keys(FIELD_LABELS) as FieldName[]).reduce(
+    (counts, field) => {
+      counts[result.results[field].status] += 1;
+      return counts;
+    },
+    {
+      match: 0,
+      review: 0,
+      mismatch: 0,
+      not_found: 0,
+      not_applicable: 0,
+    } satisfies Record<VerificationStatus, number>,
+  );
+
   return (
     <div className="verification-result" tabIndex={-1} ref={resultRef}>
       <div className="overall-summary" role="status" aria-live="polite">
         <strong>{result.overall_summary}</strong>
+        <p aria-label="Application field status counts">
+          {formatStatusCounts(statusCounts)}
+        </p>
       </div>
       <div className="field-results" aria-label="Application field results">
         {(Object.keys(FIELD_LABELS) as FieldName[]).map((field) => {
@@ -529,7 +698,11 @@ function VerificationResults({
                 </div>
                 <div>
                   <dt>Detected</dt>
-                  <dd>{fieldResult.extracted_raw ?? 'Not detected'}</dd>
+                  <dd>
+                    {fieldResult.status === 'not_applicable'
+                      ? 'Not applicable'
+                      : (fieldResult.extracted_raw ?? 'Not detected')}
+                  </dd>
                 </div>
               </dl>
               <p>{fieldResult.explanation}</p>
@@ -586,30 +759,39 @@ function GovernmentWarningResults({
         </span>
       </div>
       <p className="warning-limit-note">
-        Text checks use OCR evidence. Visual checks are conservative estimates;
-        physical type size and characters per inch require a trustworthy scale.
+        Text checks compare OCR wording directly. Image evidence can flag likely
+        presentation issues. Physical type size and characters per inch require
+        a trustworthy scale.
       </p>
-      <div className="warning-checks">
-        {(Object.keys(WARNING_CHECK_LABELS) as WarningCheckName[]).map(
-          (name) => {
-            const check = warning.checks[name];
-            return (
-              <article
-                className={`warning-check status-${check.status}`}
-                key={name}
-              >
-                <div className="warning-check-heading">
-                  <h4>{WARNING_CHECK_LABELS[name]}</h4>
-                  <span className="status-label">
-                    {STATUS_LABELS[check.status]}
-                  </span>
-                </div>
-                <p>{check.explanation}</p>
-              </article>
-            );
-          },
-        )}
-      </div>
+      {WARNING_CHECK_GROUPS.map((group) => (
+        <section
+          className="warning-check-group"
+          aria-labelledby={group.id}
+          key={group.id}
+        >
+          <h4 id={group.id}>{group.title}</h4>
+          <p>{group.description}</p>
+          <div className="warning-checks">
+            {group.checks.map((name) => {
+              const check = warning.checks[name];
+              return (
+                <article
+                  className={`warning-check status-${check.status}`}
+                  key={name}
+                >
+                  <div className="warning-check-heading">
+                    <h5>{WARNING_CHECK_LABELS[name]}</h5>
+                    <span className="status-label">
+                      {STATUS_LABELS[check.status]}
+                    </span>
+                  </div>
+                  <p>{check.explanation}</p>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ))}
       {warning.localized_text && (
         <details className="localized-warning-evidence">
           <summary>Inspect localized warning evidence</summary>
@@ -655,7 +837,9 @@ function isVerificationResponse(
     return (
       typeof result === 'object' &&
       result !== null &&
-      ['match', 'review', 'mismatch', 'not_found'].includes(result.status) &&
+      ['match', 'review', 'mismatch', 'not_found', 'not_applicable'].includes(
+        result.status,
+      ) &&
       typeof result.explanation === 'string'
     );
   });
@@ -679,4 +863,13 @@ function formatFileSize(bytes: number): string {
   return bytes < 1024 * 1024
     ? `${Math.max(1, Math.round(bytes / 1024))} KB`
     : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatStatusCounts(
+  counts: Record<VerificationStatus, number>,
+): string {
+  return (Object.keys(STATUS_LABELS) as VerificationStatus[])
+    .filter((status) => counts[status] > 0)
+    .map((status) => `${counts[status]} ${STATUS_COUNT_LABELS[status]}`)
+    .join(' · ');
 }

@@ -2,11 +2,17 @@ import re
 
 from app.models.verification import (
     AbvCandidate,
+    CountryCandidate,
     ExtractedCandidates,
     TextCandidate,
     VolumeCandidate,
 )
-from app.services.normalization import normalize_text
+from app.services.normalization import (
+    STATE_NAMES,
+    normalize_address,
+    normalize_country,
+    normalize_text,
+)
 
 ABV_NUMBER = r"\d{1,3}(?:\.\d+)?"
 VOLUME_NUMBER = r"\d+(?:\.\d+)?"
@@ -28,7 +34,7 @@ ABV_PATTERNS = (
 )
 VOLUME_PATTERN = re.compile(
     rf"(?<![\w.])(?P<value>{VOLUME_NUMBER})\s*"
-    r"(?P<unit>ml|millilit(?:er|re)s?|l|lit(?:er|re)s?)(?!\w)",
+    r"(?P<unit>ml|(?-i:mI)|millilit(?:er|re)s?|l|lit(?:er|re)s?)(?!\w)",
     re.IGNORECASE,
 )
 CLASS_TYPE_CUES = re.compile(
@@ -40,7 +46,8 @@ CLASS_TYPE_CUES = re.compile(
 EXCLUDED_BRAND_PHRASES = re.compile(
     r"\b(?:government\s+warning|alcohol\s+by\s+volume|alc\.?\s*/?\s*vol|"
     r"contains\s+sulfites|bottled\s+by|produced\s+by|distilled\s+by|"
-    r"imported\s+by|product\s+of|proof|net\s+contents?|surgeon\s+general|"
+    r"brewed\s+by|vinted\s+by|cellared\s+by|imported\s+by|imported\s+from|"
+    r"product\s+of|made\s+in|proof|net\s+contents?|surgeon\s+general|"
     r"risk\s+of\s+birth\s+defects|consumption\s+of\s+alcoholic\s+beverages|"
     r"operate\s+machinery|may\s+cause\s+health\s+problems)\b",
     re.IGNORECASE,
@@ -52,6 +59,24 @@ GENERIC_BRAND_LINES = {
     "reserve",
     "established",
 }
+PRODUCER_CUE = re.compile(
+    r"\b(?P<role>(?:produced\s+and\s+bottled|bottled|produced|distilled|brewed|"
+    r"vinted|cellared|imported)\s+by)\b[\s,:-]*(?P<name>.*)$",
+    re.IGNORECASE,
+)
+ORIGIN_PATTERN = re.compile(
+    r"\b(?:product\s+of|imported\s+from|made\s+in)\s+"
+    r"(?P<country>[A-Za-z][A-Za-z '-]{1,60}?)"
+    r"(?=\s*(?:[.,;:]|(?:imported|bottled|produced)\s+by\b|$))",
+    re.IGNORECASE,
+)
+ADDRESS_CUE = re.compile(
+    r"(?:\b\d{5}(?:-\d{4})?\b|\b(?:street|st\.?|road|rd\.?|avenue|ave\.?|"
+    r"boulevard|blvd\.?|lane|ln\.?|drive|dr\.?|highway|hwy\.?|p\.?\s*o\.?\s*box)\b|"
+    rf"[A-Za-z .'-]+,?\s+[A-Z]{{2}}(?:\s+\d{{5}})?\s*$|"
+    rf",\s*(?:{'|'.join(STATE_NAMES)})\s*$)",
+    re.IGNORECASE,
+)
 
 
 def extract_candidates(raw_text: str) -> ExtractedCandidates:
@@ -59,12 +84,85 @@ def extract_candidates(raw_text: str) -> ExtractedCandidates:
         (number, " ".join(line.split())) for number, line in enumerate(raw_text.splitlines(), 1)
     ]
     lines = [(number, line) for number, line in lines if line]
+    producer_names, producer_addresses = _extract_producer_candidates(lines)
     return ExtractedCandidates(
         brand_name=_extract_brand_candidates(lines),
         class_type=_extract_class_type_candidates(lines),
         abv=_extract_abv_candidates(lines),
         net_contents=_extract_volume_candidates(lines),
+        producer_name=producer_names,
+        producer_address=producer_addresses,
+        country_origin=_extract_country_candidates(lines),
     )
+
+
+def _extract_producer_candidates(
+    lines: list[tuple[int, str]],
+) -> tuple[list[TextCandidate], list[TextCandidate]]:
+    names: list[TextCandidate] = []
+    addresses: list[TextCandidate] = []
+    for index, (line_number, line) in enumerate(lines):
+        match = PRODUCER_CUE.search(line)
+        if match is None:
+            continue
+        inline_name = match.group("name").strip(" ,:-")
+        next_index = index + 1
+        if inline_name:
+            names.append(_text_candidate(inline_name, line, line_number))
+        elif next_index < len(lines) and not ADDRESS_CUE.search(lines[next_index][1]):
+            name_number, name_line = lines[next_index]
+            names.append(_text_candidate(name_line, f"{line}\n{name_line}", name_number))
+            next_index += 1
+        for candidate_number, candidate_line in lines[next_index : next_index + 2]:
+            if ADDRESS_CUE.search(candidate_line):
+                addresses.append(
+                    TextCandidate(
+                        raw_value=candidate_line,
+                        normalized_value=normalize_address(candidate_line),
+                        source_line=candidate_line,
+                        line_number=candidate_number,
+                    )
+                )
+                break
+    return _deduplicate_text(names), _deduplicate_text(addresses)
+
+
+def _extract_country_candidates(lines: list[tuple[int, str]]) -> list[CountryCandidate]:
+    candidates: list[CountryCandidate] = []
+    for line_number, line in lines:
+        for match in ORIGIN_PATTERN.finditer(line):
+            country = match.group("country").strip(" .,:;-")
+            if not country:
+                continue
+            candidates.append(
+                CountryCandidate(
+                    raw_value=country,
+                    normalized_value=normalize_country(country),
+                    source_line=line,
+                    line_number=line_number,
+                )
+            )
+    return candidates
+
+
+def _text_candidate(raw_value: str, source_line: str, line_number: int) -> TextCandidate:
+    return TextCandidate(
+        raw_value=raw_value,
+        normalized_value=normalize_text(raw_value),
+        source_line=source_line,
+        line_number=line_number,
+    )
+
+
+def _deduplicate_text(candidates: list[TextCandidate]) -> list[TextCandidate]:
+    seen: set[tuple[str, int]] = set()
+    unique: list[TextCandidate] = []
+    for candidate in candidates:
+        key = (candidate.normalized_value, candidate.line_number)
+        if key not in seen:
+            seen.add(key)
+            unique.append(candidate)
+    return unique
 
 
 def _extract_abv_candidates(lines: list[tuple[int, str]]) -> list[AbvCandidate]:

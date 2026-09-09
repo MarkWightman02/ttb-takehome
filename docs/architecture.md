@@ -2,7 +2,7 @@
 
 ## Scope and boundaries
 
-The foundation, local OCR, core application-data verification, and Government Health Warning analysis slices of the [specified prototype](https://github.com/treasurytakehome-rgb/instructions) are implemented. The primary flow is React application fields and image selection → `POST /api/labels/verify` → validation → preprocessing → one local Tesseract invocation → structured extraction → application comparison and warning analysis → typed results. `POST /api/labels/ocr` remains available for direct raw OCR. Product requirements and sources are tracked in [requirements.md](requirements.md).
+The foundation, local OCR, common application-data verification, and Government Health Warning analysis slices of the [specified prototype](https://github.com/treasurytakehome-rgb/instructions) are implemented. The primary flow is React application fields and image selection → `POST /api/labels/verify` → validation → preprocessing → one local Tesseract invocation → structured extraction → application comparison and warning analysis → typed results. `POST /api/labels/ocr` remains available for direct raw OCR. Product requirements and sources are tracked in [requirements.md](requirements.md).
 
 React, TypeScript, and Vite own presentation in `frontend/`. FastAPI and Pydantic own the API and typed contracts in `backend/app/`. API routing, response models, service interfaces, and configuration/error handling have separate modules. There is no database or additional service infrastructure.
 
@@ -10,7 +10,7 @@ React, TypeScript, and Vite own presentation in `frontend/`. FastAPI and Pydanti
 
 During development, the browser sends `/api/health` and the multipart OCR request to Vite on port 5173. Vite proxies `/api` to FastAPI on port 8000. An explicit origin allowlist also supports direct local API calls; credentials are unnecessary. Production serves the compiled frontend and API from one FastAPI process and one origin.
 
-Both label endpoints share the same bounded upload, Pillow validation, worker-thread preprocessing, and configured `OcrService` path. `POST /api/labels/verify` additionally accepts `brand_name`, `class_type`, `abv`, and `net_contents`, then operates only on the single returned OCR result. The multipart upload is closed in a `finally` block. Starlette may spool multipart content to secure framework-managed temporary storage; the application creates no label file and Tesseract reads PNG bytes from stdin. Image bytes and extracted text are never logged.
+Both label endpoints share the same bounded upload, Pillow validation, worker-thread preprocessing, and configured `OcrService` path. `POST /api/labels/verify` additionally accepts the core fields, producer/bottler name and address, and explicit import applicability with conditional country of origin, then operates only on the single returned OCR result. The multipart upload is closed in a `finally` block. Starlette may spool multipart content to secure framework-managed temporary storage; the application creates no label file and Tesseract reads PNG bytes from stdin. Image bytes and extracted text are never logged.
 
 ## Extraction and comparison
 
@@ -22,7 +22,11 @@ Preprocessing also retains an in-memory visual-evidence PNG after orientation an
 
 Structured extraction, normalization, and comparison are separate modules and do not depend on HTTP. Extraction preserves original candidate lines and line numbers. ABV and metric volume use explicit patterns and normalize to percentage and milliliters. Class/type detection uses a small generic cue set rather than a purported regulatory taxonomy. Brand detection examines several early meaningful lines while excluding regulatory, numeric, volume, ABV, and obvious class/type lines.
 
+Producer/bottler extraction anchors on a limited set of responsible-entity cues and examines adjacent lines for a name and address. Address normalization handles presentation punctuation and deterministic U.S. state-name/abbreviation equivalence; partial containment is review rather than match. Country extraction anchors on `Product of`, `Imported from`, and `Made in`. The request's explicit import flag controls applicability. Domestic origin results are `not_applicable` and are excluded from overall status aggregation. These utilities are deliberately not a role taxonomy, postal validator, geocoder, or complete origin-language catalog.
+
 Text comparison applies Unicode compatibility normalization, case folding, whitespace collapse, conservative punctuation handling, and apostrophe equivalence. Exact normalized equality is a match. Established sequence similarity is used only to identify conservative manual-review cases; lower similarity is a mismatch. ABV and volume comparisons are exact after numeric normalization. Distinct multiple numeric candidates always produce `review`, even when one candidate matches, because their context cannot yet be resolved reliably. No candidate produces `not_found`, not an HTTP error.
+
+The generated evaluation corpus keeps rendering, expectations, and the real-Tesseract runner separate from production services. It covers spirits, wine, and malt-beverage layouts; domestic and imported applications; true mismatches; missing evidence; ambiguity; and mild photographic degradation. The runner reports false confident matches first, status differences per case and check, OCR failures, and stage latency. Generated images remain in memory and do not become repository artifacts.
 
 Responses return supplied values, observed and normalized values, source evidence, status, and a plain-language explanation. **Plain OCR text cannot establish bold styling. Missing or uncertain image/style evidence must require review, not produce a claimed compliance pass.** Field results and overall summaries are decision support, not legal approval or rejection.
 
@@ -50,7 +54,7 @@ The health endpoint returns `{"status":"ok","service":"ttb-label-verification"}`
 
 ## Performance and connectivity
 
-The approximately five-second normal-label target remains a product goal. Raw OCR responses report processing and OCR durations; verification responses report total verification and OCR durations. Tesseract is invoked once per verification request and limited to five seconds by default. Uploads are limited to 10 MB, 12,000 pixels per edge, and 40 million pixels. Measure representative real labels and hardware before claiming the target is met. A queue or batch engine is unnecessary for this single-label slice.
+The approximately five-second normal-label target remains a product goal. Raw OCR responses report processing and OCR durations; verification responses report total verification and OCR durations. Tesseract is invoked once per verification request and limited to five seconds by default. Uploads are limited to 10 MB, 12,000 pixels per edge, and 40 million pixels. On the audited Linux host, the 16-case generated corpus measured a 494 ms median, 521 ms p90, and 612 ms slowest total. These synthetic results are a regression baseline rather than a guarantee for real photographs. A queue or batch engine is unnecessary for this single-label slice.
 
 Mandatory cloud inference would conflict with the stakeholder's restricted outbound connectivity. The protocol keeps the deployment able to use local OCR and image analysis. Building the container and installing dependencies currently require package-registry access; a restricted deployment should receive a prebuilt image with any eventual model assets included. Runtime health and static serving require no outbound connection.
 

@@ -19,7 +19,7 @@ export default function App() {
           <p className="eyebrow">Single-label review</p>
           <h1>TTB Label Verification</h1>
           <p className="lede">
-            Compare four application fields and review Government Health Warning
+            Compare application data and review Government Health Warning
             evidence from one alcohol label image.
           </p>
         </div>

@@ -40,6 +40,9 @@ def verify(client: TestClient, **overrides: str):
         "class_type": "Kentucky Straight Bourbon Whiskey",
         "abv": "45",
         "net_contents": "750 mL",
+        "producer_name": "Old Tom Distillery LLC",
+        "producer_address": "Louisville, Kentucky",
+        "imported_product": "false",
     }
     data.update(overrides)
     return client.post(
@@ -52,7 +55,7 @@ def verify(client: TestClient, **overrides: str):
 def test_all_fields_match_and_ocr_runs_exactly_once(settings: Settings):
     service = CountingOcrService(
         "OLD TOM DISTILLERY\nKentucky Straight Bourbon Whiskey\n45% Alc./Vol.\n750 mL\n"
-        + PRESCRIBED_GOVERNMENT_WARNING
+        "BOTTLED BY OLD TOM DISTILLERY LLC\nLOUISVILLE, KY\n" + PRESCRIBED_GOVERNMENT_WARNING
     )
     with TestClient(create_app(settings, ocr_service=service)) as client:
         response = verify(client)
@@ -60,7 +63,10 @@ def test_all_fields_match_and_ocr_runs_exactly_once(settings: Settings):
     assert response.status_code == 200
     payload = response.json()
     assert service.calls == 1
-    assert {result["status"] for result in payload["results"].values()} == {"match"}
+    assert {
+        result["status"] for name, result in payload["results"].items() if name != "country_origin"
+    } == {"match"}
+    assert payload["results"]["country_origin"]["status"] == "not_applicable"
     assert payload["overall_summary"] == (
         "All automated text checks matched; some visual requirements still require "
         "reviewer confirmation."
@@ -77,7 +83,9 @@ def test_all_fields_match_and_ocr_runs_exactly_once(settings: Settings):
 
 
 def test_mixed_results_and_candidate_evidence(settings: Settings):
-    service = CountingOcrService("OLD T0M DISTILLERY\nVodka\n40% ABV\n375 mL")
+    service = CountingOcrService(
+        "OLD T0M DISTILLERY\nVodka\n40% ABV\n375 mL\nBottled by River Bend LLC\nNashville, TN"
+    )
     with TestClient(create_app(settings, ocr_service=service)) as client:
         payload = verify(client).json()
 
@@ -94,7 +102,12 @@ def test_missing_extraction_is_field_level_not_http_error(settings: Settings):
         response = verify(client)
 
     assert response.status_code == 200
-    assert {result["status"] for result in response.json()["results"].values()} == {"not_found"}
+    assert {
+        result["status"]
+        for name, result in response.json()["results"].items()
+        if name != "country_origin"
+    } == {"not_found"}
+    assert response.json()["results"]["country_origin"]["status"] == "not_applicable"
     assert response.json()["government_warning"]["overall_status"] == "not_found"
 
 
@@ -146,6 +159,9 @@ def test_upload_validation_happens_before_ocr(settings: Settings):
                 "class_type": "Bourbon Whiskey",
                 "abv": "45",
                 "net_contents": "750 mL",
+                "producer_name": "Old Tom Distillery LLC",
+                "producer_address": "Louisville, KY",
+                "imported_product": "false",
             },
             files={"file": ("label.png", b"not an image", "image/png")},
         )
@@ -163,3 +179,103 @@ def test_invalid_expected_metric_volume_is_rejected_before_ocr(settings: Setting
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "invalid_net_contents"
     assert service.calls == 0
+
+
+def test_invalid_abv_is_a_typed_validation_error_before_ocr(settings: Settings):
+    service = CountingOcrService("unused")
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = verify(client, abv="101")
+
+    assert response.status_code == 422
+    assert response.json() == {
+        "error": {
+            "code": "validation_error",
+            "message": "The request contains invalid or missing values.",
+        }
+    }
+    assert service.calls == 0
+
+
+def test_missing_required_application_field_is_typed_before_ocr(settings: Settings):
+    service = CountingOcrService("unused")
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = verify(client, producer_name="")
+
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "validation_error"
+    assert service.calls == 0
+
+
+def test_unexpected_multipart_field_is_ignored_without_changing_result(settings: Settings):
+    service = CountingOcrService(
+        "OLD TOM DISTILLERY\nBourbon Whiskey\n45% ABV\n750 mL\n"
+        "Bottled by Old Tom Distillery LLC\nLouisville, KY"
+    )
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = verify(client, class_type="Bourbon Whiskey", unrelated_input="ignored")
+
+    assert response.status_code == 200
+    assert service.calls == 1
+
+
+def test_imported_country_match_and_origin_mismatch(settings: Settings):
+    service = CountingOcrService(
+        "OLD TOM DISTILLERY\nBourbon Whiskey\n45% ABV\n750 mL\n"
+        "Imported by Old Tom Distillery LLC\nLouisville, KY\nProduct of France"
+    )
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        matched = verify(
+            client,
+            class_type="Bourbon Whiskey",
+            imported_product="true",
+            country_origin="France",
+        )
+        mismatched = verify(
+            client,
+            class_type="Bourbon Whiskey",
+            imported_product="true",
+            country_origin="Italy",
+        )
+
+    assert matched.json()["results"]["country_origin"]["status"] == "match"
+    assert mismatched.json()["results"]["country_origin"]["status"] == "mismatch"
+    assert service.calls == 2
+
+
+def test_imported_product_requires_country_before_ocr(settings: Settings):
+    service = CountingOcrService("unused")
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = verify(client, imported_product="true", country_origin="")
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "missing_country_origin"
+    assert service.calls == 0
+
+
+def test_imported_origin_not_found_is_a_field_result(settings: Settings):
+    service = CountingOcrService(
+        "OLD TOM DISTILLERY\nBourbon Whiskey\n45% ABV\n750 mL\n"
+        "Imported by Old Tom Distillery LLC\nLouisville, KY"
+    )
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = verify(
+            client,
+            class_type="Bourbon Whiskey",
+            imported_product="true",
+            country_origin="France",
+        )
+
+    assert response.status_code == 200
+    assert response.json()["results"]["country_origin"]["status"] == "not_found"
+    assert service.calls == 1
+
+
+def test_producer_missing_is_a_field_result_and_ocr_runs_once(settings: Settings):
+    service = CountingOcrService("OLD TOM DISTILLERY\nBourbon Whiskey\n45% ABV\n750 mL")
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = verify(client, class_type="Bourbon Whiskey")
+
+    assert response.status_code == 200
+    assert response.json()["results"]["producer_name"]["status"] == "not_found"
+    assert response.json()["results"]["producer_address"]["status"] == "not_found"
+    assert service.calls == 1

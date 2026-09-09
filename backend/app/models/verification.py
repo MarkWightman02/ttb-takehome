@@ -1,11 +1,19 @@
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.models.ocr import OcrImageMetadata
 
-VerificationStatus = Literal["match", "review", "mismatch", "not_found"]
-FieldName = Literal["brand_name", "class_type", "abv", "net_contents"]
+VerificationStatus = Literal["match", "review", "mismatch", "not_found", "not_applicable"]
+FieldName = Literal[
+    "brand_name",
+    "class_type",
+    "abv",
+    "net_contents",
+    "producer_name",
+    "producer_address",
+    "country_origin",
+]
 
 
 class ApplicationData(BaseModel):
@@ -13,6 +21,18 @@ class ApplicationData(BaseModel):
     class_type: str = Field(min_length=1, max_length=200)
     abv: float = Field(gt=0, le=100)
     net_contents: str = Field(min_length=1, max_length=100)
+    producer_name: str = Field(min_length=1, max_length=200)
+    producer_address: str = Field(min_length=1, max_length=300)
+    imported_product: bool
+    country_origin: str | None = Field(default=None, max_length=100)
+
+    @model_validator(mode="after")
+    def require_imported_origin(self) -> Self:
+        if self.imported_product and (
+            self.country_origin is None or not self.country_origin.strip()
+        ):
+            raise ValueError("Country of origin is required for an imported product.")
+        return self
 
 
 class TextCandidate(BaseModel):
@@ -36,18 +56,28 @@ class VolumeCandidate(BaseModel):
     line_number: int = Field(ge=1)
 
 
+class CountryCandidate(BaseModel):
+    raw_value: str
+    normalized_value: str
+    source_line: str
+    line_number: int = Field(ge=1)
+
+
 class ExtractedCandidates(BaseModel):
     brand_name: list[TextCandidate] = Field(default_factory=list)
     class_type: list[TextCandidate] = Field(default_factory=list)
     abv: list[AbvCandidate] = Field(default_factory=list)
     net_contents: list[VolumeCandidate] = Field(default_factory=list)
+    producer_name: list[TextCandidate] = Field(default_factory=list)
+    producer_address: list[TextCandidate] = Field(default_factory=list)
+    country_origin: list[CountryCandidate] = Field(default_factory=list)
 
 
 class FieldVerificationResult(BaseModel):
     field: FieldName
     expected_raw: str
     extracted_raw: str | None
-    expected_normalized: str | float
+    expected_normalized: str | float | None
     extracted_normalized: str | float | None
     status: VerificationStatus
     explanation: str
@@ -60,6 +90,9 @@ class VerificationResults(BaseModel):
     class_type: FieldVerificationResult
     abv: FieldVerificationResult
     net_contents: FieldVerificationResult
+    producer_name: FieldVerificationResult
+    producer_address: FieldVerificationResult
+    country_origin: FieldVerificationResult
 
 
 class WarningBoundingBox(BaseModel):

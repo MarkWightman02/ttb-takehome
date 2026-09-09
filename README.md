@@ -1,10 +1,44 @@
 # TTB Label Verification
 
-A standalone prototype for extracting text from alcohol-label artwork and comparing core fields with expected application data. The [take-home specification](https://github.com/treasurytakehome-rgb/instructions), including its stakeholder interviews, defines the intended product.
+A standalone prototype for extracting text from alcohol-label artwork and comparing common fields with expected application data. The [take-home specification](https://github.com/treasurytakehome-rgb/instructions), including its stakeholder interviews, defines the intended product.
 
-**Current status: single-label application-data and Government Health Warning verification.** The React UI accepts expected brand, class/type, ABV, and net contents plus one PNG, JPEG, or WebP label image. One primary action runs local OCR once, extracts deterministic candidates, compares application fields, and analyzes warning text and image evidence. Raw OCR remains available as supporting evidence. Results support reviewer decisions and do not constitute final regulatory approval. No AI credentials are required.
+## What it does
+
+The reviewer enters application data, uploads one PNG, JPEG, or WebP label, and selects **Verify Label**. The application runs local OCR once, compares structured label evidence with the supplied values, analyzes the Government Health Warning, and presents field-level results with explanations and optional raw OCR evidence.
+
+Results support reviewer decisions. They do not approve or reject an application and do not determine legal compliance.
+
+## Why this approach
+
+- **Local Tesseract:** operation does not require cloud OCR, an LLM, credentials, or runtime internet access.
+- **Deterministic rules:** normalized values and preserved evidence make each result repeatable and explainable.
+- **Explicit uncertainty:** `review` and `not_found` avoid turning weak OCR or incomplete image evidence into false confidence.
+- **Request-scoped processing:** label bytes go to Tesseract over standard input and are not persisted by the application.
+- **One production container:** the compiled UI, API, Tesseract, and English language data deploy together.
+
+## Supported verification
+
+- Brand name; class/type designation; numeric ABV; metric net contents.
+- Producer/bottler name and address.
+- Country of origin when the reviewer identifies the application as imported; domestic origin is `not_applicable`.
+- Government Health Warning presence, prescribed wording, heading capitalization, and conservative image evidence for weight, continuity, separation, and contrast.
+- The applicable warning type-size and characters-per-inch tiers, with physical confirmation left to the reviewer when scale is unavailable.
+
+## What is intentionally not automated
+
+- Final legal or regulatory approval.
+- Physical type-size or characters-per-inch proof from an unscaled raster image.
+- A comprehensive beverage-specific applicability or regulation engine.
+- Batch upload, authentication, persistence, COLAs Online integration, and external/cloud AI.
 
 ## Architecture
+
+```text
+Image + Application Data
+  → Validation → Preprocessing → Tesseract OCR (once)
+  → Structured Extraction → Deterministic Comparison + Warning Analysis
+  → Reviewer Results
+```
 
 ```text
 frontend/           React + TypeScript + Vite; Vitest and ESLint
@@ -104,16 +138,19 @@ Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor p
 
 ### Verification endpoint and workflow
 
-`POST /api/labels/verify` accepts one `file` plus multipart text fields `brand_name`, `class_type`, `abv`, and `net_contents`. It reuses the OCR upload and preprocessing pipeline and invokes OCR exactly once per request. The response contains the expected values, preserved extraction candidates, normalized values, a result for each field, plain-language explanations, raw OCR text, engine and duration metadata, and warnings.
+`POST /api/labels/verify` accepts one `file` plus multipart fields `brand_name`, `class_type`, `abv`, `net_contents`, `producer_name`, `producer_address`, and the boolean `imported_product`. `country_origin` is required only when `imported_product` is true. It reuses the OCR upload and preprocessing pipeline and invokes OCR exactly once per request. The response contains expected values, preserved candidates, normalized values, a result for each field, explanations, raw OCR text, engine and duration metadata, warnings, and Government Warning analysis.
 
 - `match`: normalized values are deterministically equivalent.
 - `review`: OCR damage or multiple plausible values make the result uncertain.
 - `mismatch`: a reliable detected value differs from the application value.
 - `not_found`: no reliable candidate was extracted; this is a field result, not an HTTP failure.
+- `not_applicable`: the country-of-origin check was explicitly skipped for a domestic application; it does not degrade the overall summary.
 
 Brand and class/type comparison ignores capitalization, harmless punctuation, whitespace, Unicode presentation differences, and straight-versus-curly apostrophes. Conservative approximate text similarity can produce `review`, never `match`. ABV is compared as a percentage number without fuzzy matching. Metric net contents are converted to milliliters, so `1 L` and `1000 mL` match. Multiple distinct percentages or volumes require review even if one equals the expected value.
 
 Extraction is deliberately deterministic and conservative. It uses explicit ABV/metric-volume patterns, a small generic set of beverage cues for class/type candidates, and filtered early OCR lines for brand candidates. It does not infer proof, accept incompatible volume units, use an exhaustive beverage taxonomy, or manufacture values when text is uncertain. Results assist reviewers and do not constitute approval, rejection, or a legal-compliance determination.
+
+Producer extraction recognizes a small set of role cues such as `Bottled by`, `Produced by`, and `Imported by`, including common multiline name/location layouts. Address comparison ignores case and punctuation and normalizes U.S. state names to abbreviations; partial addresses require review, while distinct cities or states remain mismatches. This is not postal validation or geocoding. Origin extraction recognizes conservative phrases such as `Product of`, `Imported from`, and `Made in`. Import applicability always comes from the application toggle, never an OCR guess; ambiguous or unfamiliar wording remains review or not found.
 
 ### Government Health Warning analysis
 
@@ -160,6 +197,14 @@ pnpm format:check
 pnpm build
 ```
 
+Run the deterministic generated-label evaluation corpus against real Tesseract:
+
+```sh
+python backend/scripts/evaluate_labels.py
+```
+
+Add `--json` for case-level OCR text, expected/actual differences, per-check counts, and latency data. The script exits nonzero for OCR/processing failures or false confident matches. Corpus metadata and images are generated in memory; proprietary assets and output files are not required.
+
 `pnpm build` writes `frontend/dist`. For a local production-serving check, set `TTB_FRONTEND_DIST` to that directory's absolute path and start FastAPI. For example, in PowerShell from the root:
 
 ```powershell
@@ -169,6 +214,19 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
 
 Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The production bundle omits the development health indicator. Remove these environment overrides before returning to API-only development.
+
+## Performance
+
+On the Linux development host, the 16-case generated corpus completed all 272 expected status checks correctly with no OCR failures. Representative stage latency in milliseconds was:
+
+| Stage | Median | p90 | Slowest |
+| --- | ---: | ---: | ---: |
+| Preprocessing | 123 | 125 | 126 |
+| Tesseract OCR | 219 | 226 | 236 |
+| Extraction, comparison, and warning analysis | 99 | 102 | 102 |
+| Total case processing | 494 | 521 | 612 |
+
+These synthetic-label measurements are a reproducible regression baseline, not a promise for every photograph or host. They are comfortably below the stakeholder's approximately five-second ordinary-use target on the measured environment.
 
 ## Docker
 
@@ -200,8 +258,12 @@ docker compose run --rm backend python -m pytest -c backend/pyproject.toml backe
 docker compose run --rm frontend pnpm test
 ```
 
-The container supports raw OCR, application-data verification, and warning analysis. A hosted reviewer URL and additional beverage-dependent fields remain future deliverables.
+The container supports raw OCR, complete common-field application-data verification, and warning analysis. A hosted reviewer URL remains a future deliverable.
 
-## Next increment
+## Limitations and tradeoffs
 
-Add producer/bottler name and address extraction, followed by imported-product origin applicability, as a separate deterministic field-verification slice. Batch processing and difficult-photo enhancement should remain later work.
+Deterministic cues are intentionally conservative. Unusual layouts, curved or reflective containers, stylized type, glare, and poor photographs may yield `review` or `not_found`. The generated evaluation corpus covers several layouts and a mildly degraded image but is not representative of every production label. Image-based warning checks provide evidence, not measurements of physical artwork. English is the only bundled OCR language.
+
+## Future work
+
+Publish a reviewer URL, evaluate representative non-proprietary real-world artwork, then consider batch processing and difficult-photo enhancement. Batch processing is desirable for the stakeholder's workload but is not part of the reliable single-label baseline.

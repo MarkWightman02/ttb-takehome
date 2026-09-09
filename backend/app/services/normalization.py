@@ -9,6 +9,68 @@ VOLUME_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+STATE_NAMES = {
+    "alabama": "al",
+    "alaska": "ak",
+    "arizona": "az",
+    "arkansas": "ar",
+    "california": "ca",
+    "colorado": "co",
+    "connecticut": "ct",
+    "delaware": "de",
+    "florida": "fl",
+    "georgia": "ga",
+    "hawaii": "hi",
+    "idaho": "id",
+    "illinois": "il",
+    "indiana": "in",
+    "iowa": "ia",
+    "kansas": "ks",
+    "kentucky": "ky",
+    "louisiana": "la",
+    "maine": "me",
+    "maryland": "md",
+    "massachusetts": "ma",
+    "michigan": "mi",
+    "minnesota": "mn",
+    "mississippi": "ms",
+    "missouri": "mo",
+    "montana": "mt",
+    "nebraska": "ne",
+    "nevada": "nv",
+    "new hampshire": "nh",
+    "new jersey": "nj",
+    "new mexico": "nm",
+    "new york": "ny",
+    "north carolina": "nc",
+    "north dakota": "nd",
+    "ohio": "oh",
+    "oklahoma": "ok",
+    "oregon": "or",
+    "pennsylvania": "pa",
+    "rhode island": "ri",
+    "south carolina": "sc",
+    "south dakota": "sd",
+    "tennessee": "tn",
+    "texas": "tx",
+    "utah": "ut",
+    "vermont": "vt",
+    "virginia": "va",
+    "washington": "wa",
+    "west virginia": "wv",
+    "wisconsin": "wi",
+    "wyoming": "wy",
+    "district of columbia": "dc",
+}
+COUNTRY_ALIASES = {
+    "u s": "united states",
+    "u s a": "united states",
+    "usa": "united states",
+    "united states of america": "united states",
+    "uk": "united kingdom",
+    "u k": "united kingdom",
+}
+
 
 def normalize_text(value: str) -> str:
     """Normalize harmless typography without removing substantive words."""
@@ -17,6 +79,20 @@ def normalize_text(value: str) -> str:
     normalized = normalized.replace("'", "")
     normalized = re.sub(r"[_\W]+", " ", normalized, flags=re.UNICODE)
     return " ".join(normalized.split())
+
+
+def normalize_address(value: str) -> str:
+    """Normalize presentation differences while retaining address identity."""
+
+    normalized = normalize_text(value)
+    for state_name in sorted(STATE_NAMES, key=len, reverse=True):
+        normalized = re.sub(rf"\b{re.escape(state_name)}\b", STATE_NAMES[state_name], normalized)
+    return normalized
+
+
+def normalize_country(value: str) -> str:
+    normalized = normalize_text(value)
+    return COUNTRY_ALIASES.get(normalized, normalized)
 
 
 def normalize_abv(value: str | float | Decimal) -> float:

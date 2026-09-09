@@ -1,6 +1,6 @@
 # Requirements
 
-The [instruction repository][spec], including its stakeholder interviews, is the product specification. The foundation, single-label OCR, deterministic verification of brand/class/type/ABV/net contents, and Government Health Warning analysis are implemented. Final regulatory decisions remain outside the prototype. Priorities reflect the requested sequencing, not additional regulatory rules.
+The [instruction repository][spec], including its stakeholder interviews, is the product specification. The foundation, single-label OCR, deterministic verification of the listed common application fields, and Government Health Warning analysis are implemented. Final regulatory decisions remain outside the prototype. Priorities reflect the requested sequencing, not additional regulatory rules.
 
 `User` means the accompanying first-task request. Linked stakeholder names refer to the authoritative interviews. The implementation and acceptance columns are engineering proposals for meeting those requirements; they are not additional stakeholder mandates.
 
@@ -28,7 +28,7 @@ The [instruction repository][spec], including its stakeholder interviews, is the
 | Requirement | Source / stakeholder | Priority | Planned implementation | Acceptance criterion |
 | --- | --- | --- | --- | --- |
 | Compare core application data with one label | [Sarah][sarah]; User | Implemented | Typed multipart verification endpoint; one OCR invocation; separate deterministic extraction, normalization, and comparison layers | Brand, class/type, ABV, and net contents return `match`, `review`, `mismatch`, or `not_found` with evidence and explanations. |
-| Beverage-dependent fields: producer/bottler name/address; imported origin | [Label requirements][fields] | Future | Future conditional validation | Required fields follow documented beverage/import applicability; exceptions remain explicit. |
+| Producer/bottler name and address; imported origin | [Label requirements][fields] | Implemented | Cue-based deterministic extraction; conservative name/address comparison; explicit import toggle and conditional origin | Evidence and explanations are preserved; domestic origin is `not_applicable`; uncertainty routes to review. |
 | Prescribed warning wording and separation | [27 CFR 16.21][cfr-1621]; [TTB warning guidance][ttb-warning] | Implemented | Canonical backend wording, deterministic OCR-safe comparison, structured localization and layout evidence | Missing/changed/reordered content is a mismatch; likely OCR damage and uncertain layout require review. |
 | Warning capitalization and visual weight | [27 CFR 16.22][cfr-1622] | Implemented | Preserve original OCR case; separately estimate heading/body relative stroke weight | Uppercase evidence is separate from boldness; insufficient visual evidence never becomes a match. |
 | Warning legibility and contrasting background | [27 CFR 16.22][cfr-1622]; [TTB Circular 2011-04][ttb-circular] | Implemented with limitation | Conservative local luminance/background/OCR-quality evidence | Strong evidence may match; complexity, distortion, or low quality requires review and is not called legal legibility. |
@@ -37,6 +37,7 @@ The [instruction repository][spec], including its stakeholder interviews, is the
 | Approximately five-second normal verification | [Sarah][sarah]; User | Core | Report OCR and total verification durations; retain a five-second OCR timeout | Measure representative real labels and hardware before making a general performance claim. |
 | Obvious workflow across technical abilities | [Sarah][sarah] | Implemented | Four visible steps with one `Verify Label` action | Primary action and results are easy to locate. |
 | Explainable, deterministic verification results | User | Implemented | Separate comparison rules from extraction; show expected/observed values, evidence, status, and reason | Reviewers can understand each result; an LLM does not decide requirements. |
+| Repeatable quality evaluation | User | Implemented | In-memory generated labels plus a real-Tesseract evaluation runner | Reports expected/actual statuses, false confident matches, OCR failures, per-check counts, and stage latency without proprietary assets. |
 | Standalone, minimal document retention | User; [Marcus][marcus] | Core | Request-scoped processing; no database or COLAs integration | Uploads are not unnecessarily persisted; core operation needs no COLAs connection. |
 
 The warning checks implement only the cited Part 16 and TTB requirements. Core ABV and volume comparisons use exact normalized numeric equality because no tolerance was introduced. **Plain OCR text cannot establish bold styling. Pixels without trustworthy scale cannot prove millimeters or characters per inch. Unknown visual evidence requires review, not a claimed compliance pass.**
@@ -56,7 +57,6 @@ The interview's 200–300-application deliveries describe workload context, not 
 | Difficult photographs | [Jenny][jenny] | Optional, deferred | Explore angle, lighting and glare handling | Evaluate representative difficult images. |
 | Accessible deployed prototype | [Deliverables][deliverables] | Later delivery | Deploy completed core | Reviewers receive a working URL. |
 | Authentication, database, COLAs integration, Kubernetes, microservices and LLM API | User | Excluded from this task | Do not implement | No such components or dependencies are introduced. |
-| Producer/bottler identity/address and imported origin | [Label requirements][fields] | Beyond this slice | Implement beverage/import-aware extraction and comparison later | Applicability is documented before adding fields. |
 
 [spec]: https://github.com/treasurytakehome-rgb/instructions
 [sarah]: https://github.com/treasurytakehome-rgb/instructions#interview-notes-sarah-chen-deputy-director-of-label-compliance

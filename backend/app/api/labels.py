@@ -85,15 +85,33 @@ async def verify_label(
     class_type: Annotated[str, Form(min_length=1, max_length=200)],
     abv: Annotated[float, Form(gt=0, le=100)],
     net_contents: Annotated[str, Form(min_length=1, max_length=100)],
+    producer_name: Annotated[str, Form(min_length=1, max_length=200)],
+    producer_address: Annotated[str, Form(min_length=1, max_length=300)],
+    imported_product: Annotated[bool, Form()],
+    country_origin: Annotated[str | None, Form(max_length=100)] = None,
     files: Annotated[list[UploadFile] | None, File(alias="file")] = None,
 ) -> LabelVerificationResponse:
-    if not brand_name.strip() or not class_type.strip() or not net_contents.strip():
-        raise ApiError(400, "invalid_application_data", "Enter all four application fields.")
+    if not all(
+        value.strip()
+        for value in (brand_name, class_type, net_contents, producer_name, producer_address)
+    ):
+        raise ApiError(400, "invalid_application_data", "Enter all required application fields.")
+    normalized_country = country_origin.strip() if country_origin else None
+    if imported_product and not normalized_country:
+        raise ApiError(
+            400,
+            "missing_country_origin",
+            "Enter a country of origin for an imported product.",
+        )
     expected = ApplicationData(
         brand_name=brand_name.strip(),
         class_type=class_type.strip(),
         abv=abv,
         net_contents=net_contents.strip(),
+        producer_name=producer_name.strip(),
+        producer_address=producer_address.strip(),
+        imported_product=imported_product,
+        country_origin=normalized_country if imported_product else None,
     )
     try:
         normalize_volume(expected.net_contents)

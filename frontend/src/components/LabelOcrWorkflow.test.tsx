@@ -13,7 +13,7 @@ const labelFile = new File([new Uint8Array([1, 2, 3])], 'bourbon-label.png', {
   type: 'image/png',
 });
 
-type Status = 'match' | 'review' | 'mismatch' | 'not_found';
+type Status = 'match' | 'review' | 'mismatch' | 'not_found' | 'not_applicable';
 
 function warningCheck(status: Status, explanation: string) {
   return { status, explanation, evidence: [], measurements: {} };
@@ -60,7 +60,14 @@ const warningChecks = {
 };
 
 function fieldResult(
-  field: 'brand_name' | 'class_type' | 'abv' | 'net_contents',
+  field:
+    | 'brand_name'
+    | 'class_type'
+    | 'abv'
+    | 'net_contents'
+    | 'producer_name'
+    | 'producer_address'
+    | 'country_origin',
   status: Status,
   expected: string,
   detected: string | null,
@@ -75,11 +82,13 @@ function fieldResult(
     explanation:
       status === 'match'
         ? 'Matches after capitalization and punctuation normalization.'
-        : status === 'not_found'
-          ? `No reliable ${field} value was found in the extracted label text.`
-          : status === 'review'
-            ? 'Possible match found, but OCR differences require manual review.'
-            : 'The detected value differs from the application value.',
+        : status === 'not_applicable'
+          ? 'Country of origin is not checked for a domestic product.'
+          : status === 'not_found'
+            ? `No reliable ${field} value was found in the extracted label text.`
+            : status === 'review'
+              ? 'Possible match found, but OCR differences require manual review.'
+              : 'The detected value differs from the application value.',
     evidence: detected ? [detected] : [],
     similarity_score: status === 'review' ? 0.88 : null,
   };
@@ -91,8 +100,20 @@ const successfulPayload = {
     class_type: 'Kentucky Straight Bourbon Whiskey',
     abv: 45,
     net_contents: '750 mL',
+    producer_name: 'Old Tom Distillery LLC',
+    producer_address: 'Louisville, Kentucky',
+    imported_product: false,
+    country_origin: null,
   },
-  candidates: { brand_name: [], class_type: [], abv: [], net_contents: [] },
+  candidates: {
+    brand_name: [],
+    class_type: [],
+    abv: [],
+    net_contents: [],
+    producer_name: [],
+    producer_address: [],
+    country_origin: [],
+  },
   results: {
     brand_name: fieldResult(
       'brand_name',
@@ -108,6 +129,24 @@ const successfulPayload = {
     ),
     abv: fieldResult('abv', 'match', '45%', '45% Alc./Vol.'),
     net_contents: fieldResult('net_contents', 'match', '750 mL', '750 mL'),
+    producer_name: fieldResult(
+      'producer_name',
+      'match',
+      'Old Tom Distillery LLC',
+      'OLD TOM DISTILLERY LLC',
+    ),
+    producer_address: fieldResult(
+      'producer_address',
+      'match',
+      'Louisville, Kentucky',
+      'LOUISVILLE, KY',
+    ),
+    country_origin: fieldResult(
+      'country_origin',
+      'not_applicable',
+      'Not applicable',
+      null,
+    ),
   },
   government_warning: {
     overall_status: 'review' as const,
@@ -160,6 +199,16 @@ describe('label verification workflow', () => {
     );
     expect(screen.getByLabelText('Alcohol content / ABV (%)')).toHaveValue(45);
     expect(screen.getByLabelText('Net contents')).toHaveValue('750 mL');
+    expect(screen.getByLabelText('Producer / bottler name')).toHaveValue(
+      'Old Tom Distillery LLC',
+    );
+    expect(screen.getByLabelText('Producer / bottler address')).toHaveValue(
+      'Louisville, KY',
+    );
+    expect(screen.getByLabelText('No')).toBeChecked();
+    expect(
+      screen.queryByLabelText('Country of origin'),
+    ).not.toBeInTheDocument();
     expect(screen.getByText('bourbon-label.png')).toBeVisible();
     expect(
       screen.getByRole('img', { name: /bourbon-label.png/ }),
@@ -195,6 +244,10 @@ describe('label verification workflow', () => {
     expect(body.get('class_type')).toBe('Kentucky Straight Bourbon Whiskey');
     expect(body.get('abv')).toBe('45');
     expect(body.get('net_contents')).toBe('750 mL');
+    expect(body.get('producer_name')).toBe('Old Tom Distillery LLC');
+    expect(body.get('producer_address')).toBe('Louisville, KY');
+    expect(body.get('imported_product')).toBe('false');
+    expect(body.get('country_origin')).toBeNull();
     expect(body.get('file')).toBe(labelFile);
 
     await act(async () => {
@@ -214,7 +267,15 @@ describe('label verification workflow', () => {
       within(screen.getByLabelText('Application field results')).getAllByText(
         'Match',
       ),
-    ).toHaveLength(4);
+    ).toHaveLength(6);
+    expect(
+      within(screen.getByLabelText('Application field results')).getAllByText(
+        'Not applicable',
+      ),
+    ).toHaveLength(3);
+    expect(
+      screen.getByLabelText('Application field status counts'),
+    ).toHaveTextContent('6 matched · 1 not applicable');
     expect(screen.getAllByText('Brand name')).toHaveLength(2);
     expect(screen.getByText('Alcohol content / ABV')).toBeVisible();
     expect(screen.getByText('Inspect raw OCR evidence')).toBeVisible();
@@ -266,6 +327,62 @@ describe('label verification workflow', () => {
     expect(screen.getAllByText(/manual review/i).length).toBeGreaterThan(0);
   });
 
+  it('requires country only for imported products and renders its result', async () => {
+    render(<LabelOcrWorkflow />);
+    enterApplicationValues();
+    fireEvent.click(screen.getByLabelText('Yes'));
+    const country = screen.getByLabelText('Country of origin');
+    expect(country).toBeRequired();
+    fireEvent.change(country, { target: { value: 'France' } });
+    expect(country).toHaveValue('France');
+
+    fireEvent.click(screen.getByLabelText('No'));
+    expect(
+      screen.queryByLabelText('Country of origin'),
+    ).not.toBeInTheDocument();
+  });
+
+  it('submits and displays an imported country match', async () => {
+    const importedPayload = {
+      ...successfulPayload,
+      expected: {
+        ...successfulPayload.expected,
+        imported_product: true,
+        country_origin: 'France',
+      },
+      results: {
+        ...successfulPayload.results,
+        country_origin: fieldResult(
+          'country_origin',
+          'match',
+          'France',
+          'FRANCE',
+        ),
+      },
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => importedPayload });
+    vi.stubGlobal('fetch', fetchMock);
+    render(<LabelOcrWorkflow />);
+    completeForm();
+    fireEvent.click(screen.getByLabelText('Yes'));
+    fireEvent.change(screen.getByLabelText('Country of origin'), {
+      target: { value: 'France' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Label' }));
+
+    const countryHeading = await screen.findByRole('heading', {
+      name: 'Country of origin',
+    });
+    const countryResult = countryHeading.closest('article');
+    expect(countryResult).not.toBeNull();
+    expect(within(countryResult!).getByText('Match')).toBeVisible();
+    const body = fetchMock.mock.calls[0]?.[1]?.body as FormData;
+    expect(body.get('imported_product')).toBe('true');
+    expect(body.get('country_origin')).toBe('France');
+  });
+
   it('renders accessible Government Warning component results and evidence', async () => {
     vi.stubGlobal(
       'fetch',
@@ -289,6 +406,19 @@ describe('label verification workflow', () => {
     expect(within(warning).getByText('Type-size requirement')).toBeVisible();
     expect(
       within(warning).getByText('Maximum characters per inch'),
+    ).toBeVisible();
+    expect(
+      within(warning).getByRole('heading', {
+        name: 'Deterministic text checks',
+      }),
+    ).toBeVisible();
+    expect(
+      within(warning).getByRole('heading', { name: 'Image-based evidence' }),
+    ).toBeVisible();
+    expect(
+      within(warning).getByRole('heading', {
+        name: 'Manual physical confirmation',
+      }),
     ).toBeVisible();
     expect(
       within(warning).getAllByText(/trustworthy scale/i).length,
@@ -423,6 +553,12 @@ function enterApplicationValues() {
   });
   fireEvent.change(screen.getByLabelText('Net contents'), {
     target: { value: '750 mL' },
+  });
+  fireEvent.change(screen.getByLabelText('Producer / bottler name'), {
+    target: { value: 'Old Tom Distillery LLC' },
+  });
+  fireEvent.change(screen.getByLabelText('Producer / bottler address'), {
+    target: { value: 'Louisville, KY' },
   });
 }
 

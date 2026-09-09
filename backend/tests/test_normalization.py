@@ -1,6 +1,12 @@
 import pytest
 
-from app.services.normalization import normalize_abv, normalize_text, normalize_volume
+from app.services.normalization import (
+    normalize_abv,
+    normalize_address,
+    normalize_country,
+    normalize_text,
+    normalize_volume,
+)
 
 
 @pytest.mark.parametrize(
@@ -39,3 +45,11 @@ def test_abv_normalization_rejects_impossible_values(value: str):
 def test_volume_normalization_rejects_incompatible_units():
     with pytest.raises(ValueError):
         normalize_volume("25 fl oz")
+
+
+def test_address_normalization_handles_state_name_and_punctuation():
+    assert normalize_address("Louisville, Kentucky") == normalize_address("LOUISVILLE KY")
+
+
+def test_country_normalization_handles_harmless_variants():
+    assert normalize_country(" U.S.A. ") == normalize_country("United States of America")

@@ -14,6 +14,14 @@ def png_bytes(size: tuple[int, int] = (800, 400)) -> bytes:
     return output.getvalue()
 
 
+def animated_webp_bytes() -> bytes:
+    output = BytesIO()
+    first = Image.new("RGB", (80, 40), "white")
+    second = Image.new("RGB", (80, 40), "black")
+    first.save(output, format="WEBP", save_all=True, append_images=[second], duration=100)
+    return output.getvalue()
+
+
 class StubOcrService:
     def __init__(self, result: OcrResult | Exception) -> None:
         self.result = result
@@ -90,6 +98,45 @@ def test_upload_rejects_corrupt_image(settings: Settings):
     assert service.received_image is None
 
 
+def test_upload_rejects_zero_byte_image(settings: Settings):
+    service = StubOcrService(successful_result())
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = client.post(
+            "/api/labels/ocr",
+            files={"file": ("label.png", b"", "image/png")},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_image"
+    assert service.received_image is None
+
+
+def test_upload_rejects_declared_type_that_does_not_match_contents(settings: Settings):
+    service = StubOcrService(successful_result())
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = client.post(
+            "/api/labels/ocr",
+            files={"file": ("label.png", png_bytes(), "image/jpeg")},
+        )
+
+    assert response.status_code == 415
+    assert response.json()["error"]["code"] == "unsupported_file_type"
+    assert service.received_image is None
+
+
+def test_upload_rejects_animated_image(settings: Settings):
+    service = StubOcrService(successful_result())
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = client.post(
+            "/api/labels/ocr",
+            files={"file": ("label.webp", animated_webp_bytes(), "image/webp")},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_image"
+    assert service.received_image is None
+
+
 def test_upload_rejects_oversized_file(settings: Settings):
     settings.max_upload_bytes = 16
     service = StubOcrService(successful_result())
@@ -101,6 +148,20 @@ def test_upload_rejects_oversized_file(settings: Settings):
 
     assert response.status_code == 413
     assert response.json()["error"]["code"] == "file_too_large"
+    assert service.received_image is None
+
+
+def test_upload_rejects_excessive_dimensions(settings: Settings):
+    settings.max_image_pixels = 10_000
+    service = StubOcrService(successful_result())
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = client.post(
+            "/api/labels/ocr",
+            files={"file": ("label.png", png_bytes((101, 100)), "image/png")},
+        )
+
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "invalid_image_dimensions"
     assert service.received_image is None
 
 
@@ -151,3 +212,27 @@ def test_missing_tesseract_returns_typed_unavailable_error(settings: Settings):
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "ocr_unavailable"
     assert "private command path" not in response.text
+
+
+def test_valid_image_with_no_text_returns_successful_empty_evidence(settings: Settings):
+    result = OcrResult(
+        text="",
+        regions=(),
+        image_width=1600,
+        image_height=800,
+        engine_name="test-ocr",
+        duration_ms=8,
+        warnings=("No text was detected. Try a clearer image with the label filling the frame.",),
+    )
+    service = StubOcrService(result)
+    with TestClient(create_app(settings, ocr_service=service)) as client:
+        response = client.post(
+            "/api/labels/ocr",
+            files={"file": ("blank.png", png_bytes(), "image/png")},
+        )
+
+    assert response.status_code == 200
+    assert response.json()["raw_text"] == ""
+    assert response.json()["warnings"] == [
+        "No text was detected. Try a clearer image with the label filling the frame."
+    ]

@@ -3,6 +3,7 @@ import pytest
 from app.models.verification import (
     AbvCandidate,
     ApplicationData,
+    CountryCandidate,
     ExtractedCandidates,
     TextCandidate,
     VolumeCandidate,
@@ -26,6 +27,10 @@ def application(**overrides: object) -> ApplicationData:
         "class_type": "Kentucky Straight Bourbon Whiskey",
         "abv": 45.0,
         "net_contents": "750 mL",
+        "producer_name": "Old Tom Distillery LLC",
+        "producer_address": "Louisville, Kentucky",
+        "imported_product": False,
+        "country_origin": None,
     }
     values.update(overrides)
     return ApplicationData(**values)
@@ -51,6 +56,8 @@ def complete_candidates() -> ExtractedCandidates:
                 line_number=4,
             )
         ],
+        producer_name=[text_candidate("OLD TOM DISTILLERY LLC")],
+        producer_address=[text_candidate("Louisville, KY")],
     )
 
 
@@ -149,3 +156,77 @@ def test_multiple_numeric_candidates_require_review_even_when_one_matches():
     assert results.abv.status == "review"
     assert results.net_contents.status == "review"
     assert len(results.abv.evidence) == 2
+
+
+@pytest.mark.parametrize(
+    "candidate",
+    ["Old Tom Distillery LLC", "OLD TOM DISTILLERY, LLC.", "Old  Tom Distillery LLC"],
+)
+def test_producer_name_normalized_matches(candidate: str):
+    candidates = complete_candidates()
+    candidates.producer_name = [text_candidate(candidate)]
+    assert compare_application_data(application(), candidates).producer_name.status == "match"
+
+
+def test_producer_name_review_mismatch_and_missing():
+    candidates = complete_candidates()
+    candidates.producer_name = [text_candidate("Old T0m Distillery LLC")]
+    assert compare_application_data(application(), candidates).producer_name.status == "review"
+    candidates.producer_name = [text_candidate("River Bend Imports")]
+    assert compare_application_data(application(), candidates).producer_name.status == "mismatch"
+    candidates.producer_name = []
+    assert compare_application_data(application(), candidates).producer_name.status == "not_found"
+
+
+def test_multiple_producer_entities_require_review_even_when_one_matches():
+    candidates = complete_candidates()
+    candidates.producer_name.append(text_candidate("Central Coast Bottling"))
+    candidates.producer_address.append(text_candidate("Fresno, CA"))
+    results = compare_application_data(application(), candidates)
+    assert results.producer_name.status == "review"
+    assert results.producer_address.status == "review"
+    assert len(results.producer_name.evidence) == 2
+    assert len(results.producer_address.evidence) == 2
+
+
+def test_address_normalization_partial_mismatch_and_missing():
+    candidates = complete_candidates()
+    assert compare_application_data(application(), candidates).producer_address.status == "match"
+    candidates.producer_address = [text_candidate("Louisville")]
+    assert compare_application_data(application(), candidates).producer_address.status == "review"
+    candidates.producer_address = [text_candidate("Nashville, TN")]
+    assert compare_application_data(application(), candidates).producer_address.status == "mismatch"
+    candidates.producer_address = [text_candidate("Louisville, TN")]
+    assert compare_application_data(application(), candidates).producer_address.status == "mismatch"
+    candidates.producer_address = []
+    result = compare_application_data(application(), candidates)
+    assert result.producer_address.status == "not_found"
+
+
+def country_candidate(value: str) -> CountryCandidate:
+    return CountryCandidate(
+        raw_value=value,
+        normalized_value=value.casefold(),
+        source_line=f"Product of {value}",
+        line_number=7,
+    )
+
+
+def test_domestic_country_is_not_applicable_and_does_not_degrade_summary():
+    results = compare_application_data(application(), complete_candidates())
+    assert results.country_origin.status == "not_applicable"
+    assert overall_summary(results) == "All checked application fields match the label."
+
+
+def test_imported_country_match_mismatch_review_and_missing():
+    candidates = complete_candidates()
+    candidates.country_origin = [country_candidate("France")]
+    expected = application(imported_product=True, country_origin="FRANCE")
+    assert compare_application_data(expected, candidates).country_origin.status == "match"
+    expected.country_origin = "Italy"
+    assert compare_application_data(expected, candidates).country_origin.status == "mismatch"
+    candidates.country_origin = [country_candidate("Franee")]
+    expected.country_origin = "France"
+    assert compare_application_data(expected, candidates).country_origin.status == "review"
+    candidates.country_origin = []
+    assert compare_application_data(expected, candidates).country_origin.status == "not_found"

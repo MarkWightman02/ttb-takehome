@@ -22,7 +22,7 @@ describe('application shell', () => {
     expect(
       screen.getByText('No verification has been performed.'),
     ).toBeVisible();
-    expect(screen.getAllByRole('textbox')).toHaveLength(3);
+    expect(screen.getAllByRole('textbox')).toHaveLength(5);
     expect(screen.getByRole('spinbutton')).toBeVisible();
     expect(screen.getByLabelText('Choose label image')).toHaveAttribute(
       'accept',
