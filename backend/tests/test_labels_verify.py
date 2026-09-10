@@ -1,3 +1,4 @@
+from dataclasses import replace
 from io import BytesIO
 
 from fastapi.testclient import TestClient
@@ -76,9 +77,16 @@ class CountingRegionalOcrService:
     async def extract(self, image: bytes, *, media_type: str) -> OcrResult:
         del image, media_type
         self.full_calls += 1
-        return ocr_with_spatial_lines(
+        result = ocr_with_spatial_lines(
             "OLD T0M DISTILLERY\nKentucky Straight Bourbon Whiskey\n45% ABV\n750 mL\n"
-            "BOTTLED BY OLD TOM DISTILLERY LLC\nLOUISVILLE, KY\n" + PRESCRIBED_GOVERNMENT_WARNING
+            "BOTTLED BY OLD TOM DISTILLERY LLC\nLOUISVILLE, KY\n" + PRESCRIBED_GOVERNMENT_WARNING,
+        )
+        return replace(
+            result,
+            regions=tuple(
+                replace(word, confidence=0.75) if word.text == "T0M" else word
+                for word in result.regions
+            ),
         )
 
     async def extract_region(

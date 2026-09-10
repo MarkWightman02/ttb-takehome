@@ -13,9 +13,62 @@ from app.services.government_warning import analyze_government_warning
 from app.services.government_warning_rules import PRESCRIBED_GOVERNMENT_WARNING
 from app.services.image_preprocessing import prepare_image
 from app.services.ocr import BoundingBox, OcrProcessingError, OcrUnavailableError
+from app.services.ocr_refinement import crop_for_refinement
 from app.services.structured_extraction import extract_candidates
 from app.services.tesseract import TesseractOcrService, _parse_tsv
 from evaluation.corpus import evaluation_cases, render_case
+
+
+@pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract is not installed")
+@pytest.mark.parametrize(
+    ("field", "printed", "expected"),
+    [
+        ("brand_name", "1234 IMPORTS", "12345 IMPORTS"),
+        ("brand_name", "ABC DISTILLING", "ABC DISTILLERY"),
+        ("brand_name", "MALT HOP BREWERY", "MALT & HOP BREWERY"),
+        ("brand_name", "MALT @ HOP BREWERY", "MALT & HOP BREWERY"),
+        ("brand_name", "MALT & HOP BREWERY", "MALT & HOP BREWERY"),
+        ("class_type", "PALE ALE", "INDIA PALE ALE"),
+        ("net_contents", "700 ML", "750 ML"),
+        ("abv", "18% ABV", 13),
+    ],
+)
+def test_real_resized_display_ocr_preserves_substantive_differences(field, printed, expected):
+    font_path = Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf")
+    if not font_path.exists():
+        pytest.skip("DejaVu Serif font is required for the deterministic OCR smoke fixture")
+    font = ImageFont.truetype(str(font_path), 160)
+    left, top, right, bottom = font.getbbox(printed)
+    image = Image.new("RGB", (right - left + 100, bottom - top + 100), "white")
+    ImageDraw.Draw(image).text((50 - left, 50 - top), printed, fill="black", font=font)
+    output = BytesIO()
+    image.save(output, format="PNG")
+    prepared = prepare_image(output.getvalue(), content_type="image/png", settings=Settings())
+    with Image.open(BytesIO(prepared.data)) as processed:
+        width, height = processed.size
+    crop = crop_for_refinement(
+        prepared.data,
+        BoundingBox(0, 0, width, height),
+        text_height=(bottom - top) * width / image.width,
+    )
+    service = TesseractOcrService(command="tesseract", language="eng", timeout_seconds=5)
+    ocr = asyncio.run(
+        service.extract_region(crop, media_type="image/png", page_segmentation_mode=6)
+    )
+    application = ApplicationData(
+        brand_name="Example Brand",
+        class_type="Vodka",
+        abv=40,
+        net_contents="750 ML",
+        producer_name="Example Company",
+        producer_address="Miami, FL",
+        imported_product=False,
+    ).model_copy(update={field: expected})
+    result = getattr(compare_application_data(application, extract_candidates(ocr)), field)
+    assert result.extracted_raw == printed
+    assert (
+        result.status == "match" if printed == expected else result.status in {"review", "mismatch"}
+    )
 
 
 def test_tesseract_tsv_preserves_word_hierarchy_geometry_and_confidence():

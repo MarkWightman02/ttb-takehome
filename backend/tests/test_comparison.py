@@ -79,6 +79,82 @@ def test_brand_minor_ocr_damage_requires_review():
     assert result.similarity_score is not None
 
 
+@pytest.mark.parametrize(
+    ("expected", "detected"),
+    [
+        ("12345 IMPORTS", "1234 IMPORTS"),
+        ("ABC DISTILLERY", "ABC DISTILLING"),
+        ("ABC WINERY", "ABC WINES"),
+        ("MALT & HOP BREWERY", "MALT HOP BREWERY"),
+        ("MALT & HOP BREWERY", "MALT @ HOP BREWERY"),
+    ],
+)
+def test_substantive_brand_differences_never_match(expected: str, detected: str):
+    candidates = complete_candidates()
+    candidates.brand_name = [text_candidate(detected)]
+    result = compare_application_data(application(brand_name=expected), candidates).brand_name
+    assert result.status in {"review", "mismatch"}
+    assert result.expected_normalized != result.extracted_normalized
+
+
+def test_shortened_type_and_changed_numbers_never_match():
+    candidates = complete_candidates()
+    candidates.class_type = [text_candidate("PALE ALE")]
+    candidates.net_contents[0].normalized_ml = 700
+    candidates.net_contents[0].raw_value = "700 ML"
+    candidates.abv[0].normalized_percent = 18
+    candidates.abv[0].raw_value = "18% ABV"
+    results = compare_application_data(application(class_type="INDIA PALE ALE", abv=13), candidates)
+    assert results.class_type.status in {"review", "mismatch"}
+    assert results.net_contents.status == "mismatch"
+    assert results.abv.status == "mismatch"
+
+
+@pytest.mark.parametrize(
+    ("field", "expected", "detected"),
+    [
+        ("class_type", "STRAIGHT RYE WHISKY", "RYE WHISKY"),
+        ("net_contents", "500 ML", "550 ML"),
+        ("abv", 12.5, "12% ABV"),
+        ("class_type", "India Pale Ale", "India Pale Ale Extra®"),
+    ],
+)
+def test_subtle_differences_survive_extraction(field, expected, detected):
+    from app.services.structured_extraction import extract_candidates
+
+    candidates = extract_candidates(detected)
+    result = getattr(compare_application_data(application(**{field: expected}), candidates), field)
+    assert result.status in {"review", "mismatch"}
+
+
+def test_trademark_does_not_remove_the_class_word_it_is_attached_to():
+    from app.services.structured_extraction import extract_candidates
+
+    candidates = extract_candidates("India Pale Ale®")
+    result = compare_application_data(application(class_type="India Pale Ale"), candidates)
+    assert result.class_type.status == "match"
+    assert result.class_type.extracted_raw == "India Pale Ale®"
+
+
+@pytest.mark.parametrize("label", ["1 Pt. 9.4 FI. Oz", "2 PINT 4 F1 OZ"])
+def test_partially_read_compound_volume_cannot_match_only_the_pint_component(label):
+    from app.services.structured_extraction import extract_candidates
+
+    result = compare_application_data(
+        application(net_contents=label.split()[0] + " pint"), extract_candidates(label)
+    )
+    assert result.net_contents.status == "not_found"
+
+
+def test_complete_separate_imperial_values_remain_ambiguous():
+    from app.services.structured_extraction import extract_candidates
+
+    result = compare_application_data(
+        application(net_contents="1 pint"), extract_candidates("1 Pt. 9.4 FL OZ")
+    )
+    assert result.net_contents.status == "review"
+
+
 def test_brand_genuine_mismatch_and_missing_candidate():
     candidates = complete_candidates()
     candidates.brand_name = [text_candidate("River Bend")]

@@ -17,6 +17,9 @@ from app.services.normalization import (
         ("Stone—Throw", "stone throw"),
         ("OLD.TOM, DISTILLERY", "old tom distillery"),
         ("ＣＡＦÉ", "café"),
+        ("MALT＆HOP", "malt & hop"),
+        ("Malt @ Hop", "malt @ hop"),
+        ("A+B", "a + b"),
     ],
 )
 def test_text_normalization(value: str, expected: str):

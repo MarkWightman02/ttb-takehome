@@ -81,7 +81,10 @@ def normalize_text(value: str) -> str:
 
     normalized = unicodedata.normalize("NFKC", value).translate(APOSTROPHES).casefold()
     normalized = normalized.replace("'", "")
-    normalized = re.sub(r"[_\W]+", " ", normalized, flags=re.UNICODE)
+    # These symbols can distinguish company/brand identities; do not erase them
+    # as if they were commas or terminal punctuation (or turn @ into &).
+    normalized = re.sub(r"([&@+])", r" \1 ", normalized)
+    normalized = re.sub(r"[^\w&@+]+|_+", " ", normalized, flags=re.UNICODE)
     return " ".join(normalized.split())
 
 

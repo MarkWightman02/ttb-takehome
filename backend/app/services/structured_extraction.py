@@ -57,7 +57,7 @@ CLASS_TYPE_CUES = re.compile(
     re.IGNORECASE,
 )
 CLASS_ACRONYM_CUES = re.compile(r"\bipa\b", re.IGNORECASE)
-TRAILING_DECORATIVE_MARK = re.compile(r"\s+\S*[©®™]\S*\s*$")
+TRAILING_DECORATIVE_MARK = re.compile(r"\s+[oO0]?[©®™]+\s*$")
 EXCLUDED_BRAND_PHRASES = re.compile(
     r"\b(?:government\s+warning|alcohol\s+by\s+volume|alc\.?\s*/?\s*vol|"
     r"contains\s+sulfites|bottled\s+by|produced\s+by|distilled\s+by|"
@@ -291,6 +291,16 @@ def _extract_abv_candidates(lines: list[OcrLine]) -> list[AbvCandidate]:
 def _extract_volume_candidates(lines: list[OcrLine]) -> list[VolumeCandidate]:
     candidates: list[VolumeCandidate] = []
     for line in lines:
+        volume_matches = list(VOLUME_PATTERN.finditer(line.text))
+        if len(volume_matches) == 1:
+            only = volume_matches[0]
+            if only.group("unit").casefold() in {"pt", "pint", "pints"} and re.match(
+                rf"\.?\s+{VOLUME_NUMBER}\s+\S", line.text[only.end() :]
+            ):
+                # A pint followed by another amount is not a complete declaration
+                # when OCR failed to recognize that amount's unit. Never match
+                # the pint component alone as the label's total volume.
+                continue
         compound_spans: list[tuple[int, int]] = []
         for match in COMPOUND_VOLUME_PATTERN.finditer(line.text):
             metric_amount = float(match.group("metric"))
@@ -329,7 +339,7 @@ def _extract_volume_candidates(lines: list[OcrLine]) -> list[VolumeCandidate]:
                         ),
                     )
                 )
-        for match in VOLUME_PATTERN.finditer(line.text):
+        for match in volume_matches:
             if any(
                 match.start() < compound_end and match.end() > compound_start
                 for compound_start, compound_end in compound_spans
@@ -409,7 +419,7 @@ def _extract_class_type_candidates(lines: list[OcrLine]) -> list[TextCandidate]:
 
 
 def _trim_trailing_decorative_mark(value: str) -> str:
-    """Exclude a trailing trademark-like glyph while retaining its source evidence."""
+    """Exclude isolated trademark glyphs, never the substantive word carrying one."""
 
     return TRAILING_DECORATIVE_MARK.sub("", value).strip()
 

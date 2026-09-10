@@ -1,5 +1,6 @@
 import statistics
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 from io import BytesIO
 from typing import Literal
 
@@ -8,12 +9,12 @@ from PIL import Image, ImageFilter, ImageOps
 from app.models.verification import (
     ApplicationData,
     ExtractedCandidates,
-    FieldVerificationResult,
     OcrRefinementEvidence,
     RefinementBoundingBox,
     RefinementField,
     TextCandidate,
     VerificationResults,
+    VolumeCandidate,
 )
 from app.services.comparison import compare_application_data
 from app.services.normalization import normalize_text
@@ -30,6 +31,8 @@ from app.services.structured_extraction import extract_candidates
 
 MAX_REGIONAL_OCR_CALLS = 3
 MIN_REFINED_CONFIDENCE = 0.55
+TARGET_CROP_TEXT_HEIGHT = 48
+OVERSIZED_CROP_TEXT_HEIGHT = 96
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +42,9 @@ class RefinementPlan:
     crop: BoundingBox
     page_segmentation_mode: Literal[6, 7]
     full_image_candidates: tuple[str, ...]
+    source_line_numbers: tuple[int, ...] = ()
+    text_height: float | None = None
+    retained_lines: tuple[OcrLine, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,7 +86,7 @@ async def refine_ocr_candidates(
     duration_ms = 0.0
 
     for plan in plans:
-        crop_data = crop_for_refinement(preprocessed_image, plan.crop)
+        crop_data = crop_for_refinement(preprocessed_image, plan.crop, text_height=plan.text_height)
         invocations += 1
         try:
             refined_ocr = await ocr_service.extract_region(
@@ -97,16 +103,45 @@ async def refine_ocr_candidates(
 
         duration_ms += refined_ocr.duration_ms
         refined_candidates = getattr(extract_candidates(refined_ocr), plan.field)
+        if (
+            plan.retained_lines
+            and len(reconstruct_ocr_lines(refined_ocr)) == 1
+            and any(character.isalnum() for character in refined_ocr.text)
+            and not any(
+                normalize_text(line.text) in normalize_text(refined_ocr.text)
+                for line in plan.retained_lines
+            )
+        ):
+            # A smaller, already legible line can disappear when a display logo
+            # is segmented as a block. Retain that independent full-image evidence.
+            raw = " ".join([refined_ocr.text, *(line.text for line in plan.retained_lines)])
+            refined_candidates = [
+                TextCandidate(
+                    raw_value=raw,
+                    normalized_value=normalize_text(raw),
+                    source_line=(
+                        f"Regional OCR: {refined_ocr.text}\n"
+                        "Retained full-image OCR: "
+                        + " / ".join(line.text for line in plan.retained_lines)
+                    ),
+                    line_number=1,
+                )
+            ]
         mean_confidence = _mean_confidence(refined_ocr)
         trial_candidates = selected_candidates.model_copy(
             update={plan.field: refined_candidates},
             deep=True,
         )
-        trial_results = compare_application_data(expected, trial_candidates)
-        selected = _is_stronger_result(
-            before=getattr(selected_results, plan.field),
-            after=getattr(trial_results, plan.field),
-            mean_confidence=mean_confidence,
+        selected = _is_stronger_evidence(
+            before=[
+                candidate
+                for candidate in getattr(selected_candidates, plan.field)
+                if candidate.line_number in plan.source_line_numbers
+            ],
+            after=refined_candidates,
+            full_ocr=full_ocr,
+            refined_ocr=refined_ocr,
+            retained_lines=plan.retained_lines,
         )
         evidence.append(
             OcrRefinementEvidence(
@@ -128,7 +163,7 @@ async def refine_ocr_candidates(
         )
         if selected:
             selected_candidates = trial_candidates
-            selected_results = trial_results
+            selected_results = compare_application_data(expected, trial_candidates)
 
     return RefinementOutcome(
         candidates=selected_candidates,
@@ -160,37 +195,59 @@ def plan_regional_refinements(
         volume = _volume_plan(full_ocr, lines, candidates)
         if volume is not None:
             plans.append(volume)
-    if results.brand_name.status == "review" and candidates.brand_name:
+    if candidates.brand_name and (
+        results.brand_name.status == "review" or _has_weak_token(candidates.brand_name, full_ocr)
+    ):
         brand = _candidate_plan(
             full_ocr,
             lines,
             field="brand_name",
             candidate_values=candidates.brand_name,
-            selected_raw=results.brand_name.extracted_raw,
         )
         if brand is not None:
             plans.append(brand)
-    if results.class_type.status == "review" and candidates.class_type:
+    if candidates.class_type and (
+        results.class_type.status == "review" or _has_weak_token(candidates.class_type, full_ocr)
+    ):
         class_type = _candidate_plan(
             full_ocr,
             lines,
             field="class_type",
             candidate_values=candidates.class_type,
-            selected_raw=results.class_type.extracted_raw,
         )
         if class_type is not None:
             plans.append(class_type)
-    return tuple(plans[:MAX_REGIONAL_OCR_CALLS])
+    return tuple(
+        plan
+        for plan in plans[:MAX_REGIONAL_OCR_CALLS]
+        if not any(
+            plan.crop.left < region.left + region.width
+            and plan.crop.left + plan.crop.width > region.left
+            and plan.crop.top < region.top + region.height
+            and plan.crop.top + plan.crop.height > region.top
+            for region in excluded_regions
+        )
+    )
 
 
-def crop_for_refinement(image_data: bytes, crop: BoundingBox) -> bytes:
+def crop_for_refinement(
+    image_data: bytes, crop: BoundingBox, *, text_height: float | None = None
+) -> bytes:
     """Crop existing OCR pixels, then apply bounded local contrast and sharpening."""
 
     with Image.open(BytesIO(image_data)) as source:
         image = source.convert("L")
         region = image.crop((crop.left, crop.top, crop.left + crop.width, crop.top + crop.height))
-    region = ImageOps.autocontrast(region)
-    region = region.filter(ImageFilter.UnsharpMask(radius=1, percent=150, threshold=2))
+    if text_height is not None and text_height > OVERSIZED_CROP_TEXT_HEIGHT:
+        scale = TARGET_CROP_TEXT_HEIGHT / text_height
+        region = region.resize(
+            (max(1, round(region.width * scale)), max(1, round(region.height * scale))),
+            Image.Resampling.LANCZOS,
+        )
+        region = ImageOps.autocontrast(region)
+    else:
+        region = ImageOps.autocontrast(region)
+        region = region.filter(ImageFilter.UnsharpMask(radius=1, percent=150, threshold=2))
     output = BytesIO()
     region.save(output, format="PNG")
     region.close()
@@ -203,12 +260,10 @@ def _candidate_plan(
     *,
     field: RefinementField,
     candidate_values: list[TextCandidate],
-    selected_raw: str | None,
 ) -> RefinementPlan | None:
-    primary = next(
-        (candidate for candidate in candidate_values if candidate.raw_value == selected_raw),
-        candidate_values[0],
-    )
+    # Candidate order is image-derived. A comparison's closest expected value
+    # must not decide which pixels receive another recognition attempt.
+    primary = candidate_values[0]
     by_number = {line.sequence_number: line for line in lines}
     primary_line = by_number.get(primary.line_number)
     if primary_line is None or primary_line.bounding_box is None:
@@ -234,20 +289,45 @@ def _candidate_plan(
     box = union_boxes([line.bounding_box for line in selected_lines])
     if box is None:
         return None
+    retained_lines: tuple[OcrLine, ...] = ()
+    if field == "brand_name" and len(selected_lines) > 1:
+        smaller = [line for line in selected_lines if line is not primary_line]
+        if all(
+            line.top is not None
+            and line.top >= primary_line.top + primary_line.height
+            and (line.approximate_line_height or 0) * 2.5 < primary_line.height
+            and line.mean_confidence is not None
+            and line.mean_confidence >= 0.85
+            for line in smaller
+        ):
+            retained_lines = tuple(sorted(smaller, key=lambda line: line.top or 0))
     crop = _expanded_box(
         box,
         full_ocr.image_width,
         full_ocr.image_height,
         vertical_margin_ratio=0.35 if field == "class_type" else 0.18,
+        minimum_horizontal_margin=primary_line.height * 0.5 if retained_lines else 0,
     )
     line_count = len({line.sequence_number for line in selected_lines})
     mode = 6 if field == "brand_name" or line_count > 1 else 7
     return RefinementPlan(
         field=field,
-        trigger=f"Full-image {field} comparison requires review.",
+        trigger=f"Full-image {field} has uncertain text or weak token confidence.",
         crop=crop,
         page_segmentation_mode=mode,
         full_image_candidates=tuple(candidate.raw_value for candidate in candidate_values),
+        source_line_numbers=tuple(line.sequence_number for line in selected_lines),
+        text_height=(
+            statistics.median(
+                word.bounding_box.height
+                for line in selected_lines
+                for word in line.words
+                if word.bounding_box is not None
+            )
+            if not retained_lines
+            else None
+        ),
+        retained_lines=retained_lines,
     )
 
 
@@ -323,8 +403,9 @@ def _expanded_box(
     image_height: int,
     *,
     vertical_margin_ratio: float = 0.18,
+    minimum_horizontal_margin: float = 0,
 ) -> BoundingBox:
-    horizontal_margin = max(16, round(box.width * 0.08))
+    horizontal_margin = max(16, round(box.width * 0.08), round(minimum_horizontal_margin))
     vertical_margin = max(12, round(box.height * vertical_margin_ratio))
     left = max(0, box.left - horizontal_margin)
     top = max(0, box.top - vertical_margin)
@@ -338,13 +419,69 @@ def _mean_confidence(ocr: OcrResult) -> float | None:
     return statistics.fmean(confidences) if confidences else None
 
 
-def _is_stronger_result(
+def _is_stronger_evidence(
     *,
-    before: FieldVerificationResult,
-    after: FieldVerificationResult,
-    mean_confidence: float | None,
+    before: list[TextCandidate] | list[VolumeCandidate],
+    after: list[TextCandidate] | list[VolumeCandidate],
+    full_ocr: OcrResult,
+    refined_ocr: OcrResult,
+    retained_lines: tuple[OcrLine, ...] = (),
 ) -> bool:
-    if mean_confidence is None or mean_confidence < MIN_REFINED_CONFIDENCE:
+    """Select evidence before comparing it with the application, including mismatches."""
+    if len(after) != 1:
         return False
-    rank = {"not_found": 0, "mismatch": 1, "review": 2, "match": 3, "not_applicable": 0}
-    return rank[after.status] > rank[before.status]
+    after_conf = _candidate_confidences(after, refined_ocr)
+    after_conf.extend(
+        word.confidence
+        for line in retained_lines
+        for word in line.words
+        if word.confidence is not None
+    )
+    if not after_conf or min(after_conf) < MIN_REFINED_CONFIDENCE:
+        return False
+    if not before:
+        return True  # A single syntactically valid, legible volume where none existed.
+    before_text = " ".join(candidate.raw_value for candidate in before)
+    after_text = after[0].raw_value
+    before_norm, after_norm = normalize_text(before_text), normalize_text(after_text)
+    if (
+        len(after_norm) < len(before_norm) * 0.75
+        or SequenceMatcher(None, before_norm, after_norm).ratio() < 0.65
+    ):
+        return False  # Do not replace a complete field with a fragment/unrelated crop.
+    before_conf = _candidate_confidences(before, full_ocr)
+    if not before_conf:
+        return False
+    return (
+        statistics.fmean(after_conf) >= statistics.fmean(before_conf) + 0.02
+        or min(after_conf) >= min(before_conf) + 0.10
+    )
+
+
+def _candidate_confidences(
+    candidates: list[TextCandidate] | list[VolumeCandidate], ocr: OcrResult
+) -> list[float]:
+    # Only candidate tokens contribute. A decorative trailing glyph must neither
+    # hide a damaged content token in the mean nor veto an otherwise legible line.
+    lines = reconstruct_ocr_lines(ocr)
+    relevant = []
+    for candidate in candidates:
+        for line in lines:
+            if line.sequence_number == candidate.line_number or (
+                candidate.line_number < line.sequence_number <= candidate.line_number + 2
+                and normalize_text(line.text) in normalize_text(candidate.raw_value)
+            ):
+                relevant.extend(line.words)
+    tokens = {
+        token for candidate in candidates for token in normalize_text(candidate.raw_value).split()
+    }
+    return [
+        word.confidence if word.confidence is not None else 0.0
+        for word in relevant
+        if (normalized := normalize_text(word.text)) and set(normalized.split()) <= tokens
+    ]
+
+
+def _has_weak_token(candidates: list[TextCandidate], ocr: OcrResult) -> bool:
+    confidences = _candidate_confidences(candidates, ocr)
+    return bool(confidences) and min(confidences) < 0.80
