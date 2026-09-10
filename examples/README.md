@@ -1,15 +1,11 @@
-# Real TTB sample regression fixtures
+# Synthetic TTB test labels
 
-These TTB-provided educational/sample label images are included to exercise the prototype's real-Tesseract and spatial-layout behavior. Each companion JSON file represents the expected application input used by the verification workflow. The six pairs are a small regression set, not a comprehensive benchmark or an estimate of real-world accuracy.
+20 synthetic fixtures for OCR/regression testing of the label-verification prototype.
 
-The runner decodes image content rather than trusting filename extensions. `FBN.jpg`, `MHB.jpg`, and `WINE.jpg` contain PNG data. This is retained as received so upload/content validation and evaluation provenance remain visible.
+- 20 PNG label images and 20 companion JSON files
+- `batch_manifest.csv` is ready for the batch workflow
+- Application values intentionally match the visible label text
+- Mix of spirits, wine, malt beverages, imported/domestic products, single/multi-panel layouts, and easy/medium/hard rendering
+- Government Warning text is included on every fixture
 
-Some expected application values are not explicit responsible-entity statements on the visible artwork. In particular, FBN and MHB identify a brand and location but do not show a producer/bottler role cue. The evaluator preserves `not_found` for those producer/address checks instead of inventing an association. Targeted regional OCR recovers MHB's visible `500 ML` evidence; this does not change the treatment of unsupported responsible-party metadata.
-
-Run the set with:
-
-```sh
-python backend/scripts/evaluate_real_labels.py
-```
-
-Use `--json` for raw OCR, candidate evidence, field and Government Warning checks, decoded-format metadata, and per-stage timings.
+These are synthetic testing artifacts, not legally reviewed labels and not an accuracy benchmark.

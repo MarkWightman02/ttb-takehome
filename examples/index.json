@@ -1,0 +1,142 @@
+[
+  {
+    "id": "T01",
+    "brand_name": "HARBOR RIDGE DISTILLING",
+    "class_type": "STRAIGHT BOURBON WHISKEY",
+    "layout": "single",
+    "difficulty": "easy"
+  },
+  {
+    "id": "T02",
+    "brand_name": "MAPLE & STONE BREWING",
+    "class_type": "INDIA PALE ALE",
+    "layout": "single",
+    "difficulty": "easy"
+  },
+  {
+    "id": "T03",
+    "brand_name": "NORTHSTAR CELLARS",
+    "class_type": "AMERICAN RED WINE",
+    "layout": "single",
+    "difficulty": "easy"
+  },
+  {
+    "id": "T04",
+    "brand_name": "SOL DORADO IMPORTS",
+    "class_type": "TEQUILA BLANCO",
+    "layout": "double",
+    "difficulty": "easy"
+  },
+  {
+    "id": "T05",
+    "brand_name": "FJORD HOUSE",
+    "class_type": "AQUAVIT",
+    "layout": "double",
+    "difficulty": "medium"
+  },
+  {
+    "id": "T06",
+    "brand_name": "CASK & CLOVER",
+    "class_type": "IRISH WHISKEY",
+    "layout": "double",
+    "difficulty": "medium"
+  },
+  {
+    "id": "T07",
+    "brand_name": "JUNIPER WORKS",
+    "class_type": "LONDON DRY GIN",
+    "layout": "single",
+    "difficulty": "easy"
+  },
+  {
+    "id": "T08",
+    "brand_name": "COPPER FINCH",
+    "class_type": "VODKA",
+    "layout": "single",
+    "difficulty": "easy"
+  },
+  {
+    "id": "T09",
+    "brand_name": "ORCHARD LINE",
+    "class_type": "HARD CIDER",
+    "layout": "single",
+    "difficulty": "medium"
+  },
+  {
+    "id": "T10",
+    "brand_name": "MESA ROJA",
+    "class_type": "AMERICAN RED WINE",
+    "layout": "single",
+    "difficulty": "easy"
+  },
+  {
+    "id": "T11",
+    "brand_name": "HIGHTIDE BREWING CO.",
+    "class_type": "LAGER",
+    "layout": "double",
+    "difficulty": "medium"
+  },
+  {
+    "id": "T12",
+    "brand_name": "EMBER & GRAIN",
+    "class_type": "STRAIGHT RYE WHISKEY",
+    "layout": "single",
+    "difficulty": "medium"
+  },
+  {
+    "id": "T13",
+    "brand_name": "ALPINE ECHO",
+    "class_type": "SAUVIGNON BLANC",
+    "layout": "double",
+    "difficulty": "medium"
+  },
+  {
+    "id": "T14",
+    "brand_name": "BLACKBIRD RUM CO.",
+    "class_type": "DARK RUM",
+    "layout": "single",
+    "difficulty": "medium"
+  },
+  {
+    "id": "T15",
+    "brand_name": "GOLDEN ORCHARD",
+    "class_type": "APPLE BRANDY",
+    "layout": "single",
+    "difficulty": "medium"
+  },
+  {
+    "id": "T16",
+    "brand_name": "BLUE LANTERN IMPORTS",
+    "class_type": "PLUM WINE",
+    "layout": "double",
+    "difficulty": "hard"
+  },
+  {
+    "id": "T17",
+    "brand_name": "IRONWOOD BREWERY",
+    "class_type": "STOUT",
+    "layout": "double",
+    "difficulty": "hard"
+  },
+  {
+    "id": "T18",
+    "brand_name": "SILVER THREAD CELLARS",
+    "class_type": "ROSÉ WINE",
+    "layout": "single",
+    "difficulty": "hard"
+  },
+  {
+    "id": "T19",
+    "brand_name": "MERIDIAN SPIRITS",
+    "class_type": "COCONUT RUM LIQUEUR",
+    "layout": "double",
+    "difficulty": "hard"
+  },
+  {
+    "id": "T20",
+    "brand_name": "OLD MILL DISTILLERY",
+    "class_type": "STRAIGHT RYE WHISKY",
+    "layout": "double",
+    "difficulty": "hard"
+  }
+]

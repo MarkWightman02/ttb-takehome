@@ -299,6 +299,7 @@ def evaluation_cases() -> tuple[EvaluationCase, ...]:
             country="France",
             origin_line="MADE IN FRANCE",
             degradation="mild_photo",
+            overrides={"warning.continuous_statement": "review"},
             notes="Mild rotation, blur, contrast loss, downsampling, and JPEG artifacts.",
         ),
         _case(
@@ -439,7 +440,8 @@ def _matching_expectations(imported: bool) -> dict[str, str]:
         "warning.heading_capitalization": "match",
         "warning.heading_boldness": "match",
         "warning.body_not_bold": "match",
-        "warning.continuous_statement": "review",
+        # Wrapped lines remain continuous even when sparse OCR splits blocks.
+        "warning.continuous_statement": "match",
         "warning.separation": "match",
         "warning.legibility_contrast": "match",
         "warning.type_size": "review",

@@ -397,6 +397,9 @@ describe('label verification workflow', () => {
     const warning = await screen.findByRole('region', {
       name: 'Government Health Warning',
     });
+    expect(
+      within(warning).queryByText(/Automated warning checks passed/),
+    ).toBeNull();
     expect(within(warning).getByText('Warning found')).toBeVisible();
     expect(within(warning).getByText('Required wording')).toBeVisible();
     expect(within(warning).getByText('Heading boldness')).toBeVisible();
@@ -428,6 +431,41 @@ describe('label verification workflow', () => {
     );
     expect(within(warning).getByText(/GOVERNMENT WARNING:/)).toBeVisible();
     expect(within(warning).getByText(/Mean OCR confidence 92%/)).toBeVisible();
+  });
+
+  it('explains when only physical warning checks remain manual', async () => {
+    const checks = Object.fromEntries(
+      Object.entries(warningChecks).map(([name, check]) => [
+        name,
+        {
+          ...check,
+          status: ['type_size', 'characters_per_inch'].includes(name)
+            ? 'review'
+            : 'match',
+        },
+      ]),
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          ...successfulPayload,
+          government_warning: {
+            ...successfulPayload.government_warning,
+            checks,
+          },
+        }),
+      }),
+    );
+    render(<LabelOcrWorkflow />);
+    completeForm();
+    fireEvent.click(screen.getByRole('button', { name: 'Verify Label' }));
+    expect(
+      await screen.findByText(
+        'Automated warning checks passed; physical dimensions require manual confirmation.',
+      ),
+    ).toBeVisible();
   });
 
   it('shows warning wording and capitalization mismatches as text', async () => {

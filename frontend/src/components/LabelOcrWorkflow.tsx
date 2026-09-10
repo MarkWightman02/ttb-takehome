@@ -609,6 +609,9 @@ function GovernmentWarningResults({
   idPrefix: string;
 }) {
   const warningTitleId = `${idPrefix}government-warning-title`;
+  const automatedChecksPassed = Object.entries(warning.checks)
+    .filter(([name]) => name !== 'type_size' && name !== 'characters_per_inch')
+    .every(([, check]) => check.status === 'match');
   return (
     <section
       className="government-warning-results"
@@ -620,6 +623,12 @@ function GovernmentWarningResults({
           {STATUS_LABELS[warning.overall_status]}
         </span>
       </div>
+      {automatedChecksPassed && (
+        <p>
+          Automated warning checks passed; physical dimensions require manual
+          confirmation.
+        </p>
+      )}
       <p className="warning-limit-note">
         Text checks compare OCR wording directly. Image evidence can flag likely
         presentation issues. Physical type size and characters per inch require

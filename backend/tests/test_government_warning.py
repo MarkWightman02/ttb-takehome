@@ -1,3 +1,6 @@
+import asyncio
+import shutil
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 
@@ -263,23 +266,23 @@ def test_fragmented_or_incomplete_geometry_remains_reviewable():
     assert result.checks.heading_boldness.status == "review"
 
 
-def test_paragraph_break_requires_continuity_review():
+def test_paragraph_ids_do_not_override_coherent_continuity_geometry():
     result = analyze_government_warning(
         structured_result(paragraph_break=True),
         preprocessed_image=blank_png(),
         container_volume_ml=750,
     )
-    assert result.checks.continuous_statement.status == "review"
+    assert result.checks.continuous_statement.status == "match"
 
 
-def test_ocr_block_fragmentation_alone_requires_continuity_review():
+def test_ocr_block_fragmentation_alone_does_not_prevent_continuity_match():
     result = analyze_government_warning(
         structured_result(block_break=True),
         preprocessed_image=blank_png(),
         container_volume_ml=750,
     )
     assert result.checks.wording.status == "match"
-    assert result.checks.continuous_statement.status == "review"
+    assert result.checks.continuous_statement.status == "match"
 
 
 @pytest.mark.parametrize(
@@ -383,6 +386,7 @@ def synthetic_warning(
     background: int = 255,
     font_size: int = 32,
     textured: bool = False,
+    heading_font_size: int | None = None,
 ) -> tuple[OcrResult, bytes]:
     image = Image.new("L", (2200, 620), background)
     if textured:
@@ -393,11 +397,14 @@ def synthetic_warning(
     draw = ImageDraw.Draw(image)
     regular = ImageFont.truetype(str(REGULAR_FONT), font_size)
     bold = ImageFont.truetype(str(BOLD_FONT), font_size)
+    heading_font = ImageFont.truetype(
+        str(BOLD_FONT if heading_bold else REGULAR_FONT), heading_font_size or font_size
+    )
     regions: list[TextRegion] = []
     x, y = 80, 80
     line_id = 1
     for index, word in enumerate(PRESCRIBED_GOVERNMENT_WARNING.split()):
-        font = bold if (index < 2 and heading_bold) or (index >= 2 and body_bold) else regular
+        font = heading_font if index < 2 else (bold if body_bold else regular)
         bounds = draw.textbbox((x, y), word, font=font)
         width = bounds[2] - bounds[0]
         if x + width > 2050:
@@ -502,9 +509,182 @@ def test_low_contrast_and_tiny_text_do_not_receive_visual_matches():
     )
     low = analyze_government_warning(low_ocr, preprocessed_image=low_image, container_volume_ml=750)
     assert low.checks.legibility_contrast.status in {"review", "mismatch"}
+    assert low.checks.heading_boldness.status == "review"
+    assert low.checks.body_not_bold.status == "review"
 
     tiny_ocr, tiny_image = synthetic_warning(heading_bold=True, body_bold=False, font_size=8)
     tiny = analyze_government_warning(
         tiny_ocr, preprocessed_image=tiny_image, container_volume_ml=750
     )
     assert tiny.checks.heading_boldness.status == "review"
+
+
+@pytest.mark.parametrize(
+    "heading", ["GOVERNMENT : WARNING", "GOVERNMENT—WARNING", "GOVERNMENT WARNING："]
+)
+def test_heading_capitalization_ignores_only_punctuation(heading):
+    text = PRESCRIBED_GOVERNMENT_WARNING.replace("GOVERNMENT WARNING:", heading)
+    assert raw_analysis(text).checks.heading_capitalization.status == "match"
+
+
+@pytest.mark.parametrize("marker", ["(3)", "(7)"])
+def test_reliably_incorrect_clause_number_is_not_forgiven(marker):
+    text = PRESCRIBED_GOVERNMENT_WARNING.replace("(1)", marker)
+    result = analyze_government_warning(
+        structured_result(text), preprocessed_image=blank_png(), container_volume_ml=750
+    )
+    assert result.checks.wording.status == "mismatch"
+
+
+def test_ocr_joined_tokens_remain_review_not_match():
+    text = PRESCRIBED_GOVERNMENT_WARNING.replace("drive a", "drivea")
+    result = analyze_government_warning(
+        structured_result(text, confidence_overrides={"drivea": 0.4}),
+        preprocessed_image=blank_png(),
+        container_volume_ml=750,
+    )
+    assert result.checks.wording.status == "review"
+
+
+@pytest.mark.parametrize(
+    "mode", ["vertical_gap", "different_column", "missing_box", "different_page"]
+)
+def test_complete_text_without_coherent_geometry_is_not_continuity_match(mode):
+    ocr = structured_result()
+    changed = []
+    for region in ocr.regions:
+        if region.line_id and region.line_id >= 5:
+            box = region.bounding_box
+            if mode == "vertical_gap":
+                region = replace(region, bounding_box=replace(box, top=box.top + 250))
+            elif mode == "different_column":
+                region = replace(region, bounding_box=replace(box, left=box.left + 1400))
+            elif mode == "missing_box":
+                region = replace(region, bounding_box=None)
+            else:
+                region = replace(region, page_id=2)
+        changed.append(region)
+    # Test the continuity evidence itself; localization may legitimately return
+    # only the first region when a clause is far away.
+    from app.services.government_warning import _continuity_check, _localize_warning
+
+    localized = _localize_warning(ocr)
+    result = _continuity_check(replace(localized, regions=tuple(changed)))
+    assert result.status == "review"
+
+
+@pytest.mark.parametrize("heading_bold,body_bold", [(False, False), (True, True), (False, True)])
+@pytest.mark.parametrize("heading_size", [48, 64])
+def test_larger_heading_is_not_itself_boldness_evidence(heading_bold, body_bold, heading_size):
+    ocr, image = synthetic_warning(
+        heading_bold=heading_bold,
+        body_bold=body_bold,
+        heading_font_size=heading_size,
+    )
+    result = analyze_government_warning(ocr, preprocessed_image=image, container_volume_ml=750)
+    assert result.checks.heading_boldness.status != "match"
+    assert result.checks.body_not_bold.status != "match"
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("font_size", [24, 40, 56])
+def test_clear_relative_weight_is_scale_and_polarity_aware(reverse, font_size):
+    ocr, image = synthetic_warning(
+        heading_bold=True,
+        body_bold=False,
+        font_size=font_size,
+        foreground=255 if reverse else 0,
+        background=0 if reverse else 255,
+    )
+    result = analyze_government_warning(ocr, preprocessed_image=image, container_volume_ml=750)
+    assert result.checks.heading_boldness.status == "match"
+    assert result.checks.body_not_bold.status == "match"
+    assert result.checks.legibility_contrast.status == "match"
+
+
+def test_dark_decoration_cannot_make_low_contrast_words_legible():
+    ocr, data = synthetic_warning(
+        heading_bold=True,
+        body_bold=False,
+        foreground=140,
+        background=160,
+    )
+    with Image.open(BytesIO(data)) as source:
+        image = source.convert("L")
+    draw = ImageDraw.Draw(image)
+    # High-contrast decoration in the warning rectangle, not the text strokes.
+    draw.rectangle((80, 123, 2030, 131), fill=0)
+    output = BytesIO()
+    image.save(output, format="PNG")
+    result = analyze_government_warning(
+        ocr, preprocessed_image=output.getvalue(), container_volume_ml=750
+    )
+    assert result.checks.legibility_contrast.status != "match"
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_robust_contrast_fallback_rejects_noisy_whitespace(reverse):
+    from app.services.government_warning import _localize_warning, _word_contrast_evidence
+
+    ocr, data = synthetic_warning(
+        heading_bold=True,
+        body_bold=False,
+        textured=True,
+        foreground=255 if reverse else 0,
+        background=35 if reverse else 220,
+    )
+    evidence = _word_contrast_evidence(_localize_warning(ocr), data)
+    assert evidence["word_contrast_lower_quartile"] >= 0.55
+    assert evidence["whitespace_spread_upper_quartile"] > 12
+    result = analyze_government_warning(ocr, preprocessed_image=data, container_volume_ml=750)
+    assert result.checks.legibility_contrast.status == "review"
+
+
+def test_warning_in_unrelated_text_is_not_separate():
+    from app.services.government_warning import _localize_warning, _separation_check
+
+    ocr = structured_result()
+    localized = _localize_warning(ocr)
+    neighbor = replace(
+        ocr.regions[0], text="SPECIAL OFFER", bounding_box=BoundingBox(130, 140, 120, 24)
+    )
+    result = _separation_check(localized, (*ocr.regions, neighbor))
+    assert result.status == "review"
+
+
+@pytest.mark.skipif(shutil.which("tesseract") is None, reason="Tesseract unavailable")
+@pytest.mark.parametrize(
+    "variant", ["clean", "reverse", "same_weight", "all_bold", "body_heavier", "low_contrast"]
+)
+def test_real_engine_warning_visual_controls(variant):
+    from app.core.config import Settings
+    from app.services.image_preprocessing import prepare_image
+    from app.services.tesseract import TesseractOcrService
+
+    _, source = synthetic_warning(
+        heading_bold=variant not in {"same_weight", "body_heavier"},
+        body_bold=variant in {"all_bold", "body_heavier"},
+        foreground=255 if variant == "reverse" else 140 if variant == "low_contrast" else 0,
+        background=0 if variant == "reverse" else 160 if variant == "low_contrast" else 255,
+    )
+    prepared = prepare_image(source, content_type="image/png", settings=Settings())
+    service = TesseractOcrService(command="tesseract", language="eng", timeout_seconds=5)
+    ocr = asyncio.run(service.extract(prepared.data, media_type="image/png"))
+    result = analyze_government_warning(
+        ocr,
+        preprocessed_image=prepared.visual_evidence_data,
+        container_volume_ml=750,
+    )
+    assert result.checks.wording.status == "match"
+    assert result.checks.continuous_statement.status == "match"
+    assert result.checks.type_size.status == "review"
+    assert result.checks.characters_per_inch.status == "review"
+    if variant in {"clean", "reverse"}:
+        assert result.checks.heading_boldness.status == "match"
+        assert result.checks.body_not_bold.status == "match"
+        assert result.checks.legibility_contrast.status == "match"
+    else:
+        assert result.checks.heading_boldness.status != "match"
+        assert result.checks.body_not_bold.status != "match"
+    if variant == "low_contrast":
+        assert result.checks.legibility_contrast.status != "match"

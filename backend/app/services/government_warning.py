@@ -378,7 +378,8 @@ def _capitalization_check(localized: LocalizedWarning | None) -> WarningCheck:
         return _not_found_check(
             "Heading capitalization could not be checked because no warning was located."
         )
-    match = re.match(r"\s*([^\s:]+)\s+([^\s:]+)", localized.text)
+    # Capitalization concerns letters, not a damaged colon/dash between words.
+    match = re.match(r"\s*(government)\W+(warning)\b", localized.text, re.IGNORECASE)
     if match is None:
         return WarningCheck(
             status="review",
@@ -441,10 +442,14 @@ def _visual_weight_checks(
     heading_stroke, heading_density, heading_height = heading_metrics
     body_stroke, body_density, body_height = body_metrics
     ratio = heading_stroke / body_stroke if body_stroke else 0
+    # Area/perimeter estimates stroke width in pixels. Divide by glyph height
+    # before comparing: a larger regular heading is not evidence of bold type.
+    ratio *= body_height / heading_height
     measurements = {
         "heading_stroke_index": round(heading_stroke, 3),
         "body_stroke_index": round(body_stroke, 3),
         "relative_stroke_ratio": round(ratio, 3),
+        "stroke_ratio_height_normalized": True,
         "heading_ink_density": round(heading_density, 3),
         "body_ink_density": round(body_density, 3),
         "median_heading_height_px": round(heading_height, 1),
@@ -567,37 +572,47 @@ def _continuity_check(localized: LocalizedWarning | None) -> WarningCheck:
             ),
             evidence=list(localized.source_lines),
         )
-    paragraphs_by_block: dict[tuple[int | None, int | None], set[int]] = {}
-    for region in localized.regions:
-        if region.paragraph_id is None:
-            continue
-        block = (region.page_id, region.block_id)
-        paragraphs_by_block.setdefault(block, set()).add(region.paragraph_id)
-    if any(len(paragraphs) > 1 for paragraphs in paragraphs_by_block.values()):
+    if (
+        any(region.bounding_box is None for region in localized.regions)
+        or len({region.page_id for region in localized.regions}) != 1
+    ):
         return WarningCheck(
             status="review",
-            explanation="The clauses occur in order but include an OCR paragraph break.",
+            explanation="Complete single-page geometry is needed to assess warning continuity.",
             evidence=list(localized.source_lines),
         )
-    block_ids = {
-        (region.page_id, region.block_id)
-        for region in localized.regions
-        if region.block_id is not None
-    }
-    if len(block_ids) > 1:
-        return WarningCheck(
-            status="review",
-            explanation="The clauses occur in order but span multiple OCR text blocks.",
-            evidence=list(localized.source_lines),
-            measurements={"ocr_block_count": len(block_ids)},
-        )
-    line_boxes: dict[tuple[int | None, ...], list[BoundingBox]] = {}
+    # Sparse-text OCR often creates one block per wrapped line, or fragments
+    # one physical row across blocks. Reconstruct rows by vertical overlap.
+    rows: list[list[BoundingBox]] = []
     for region in localized.regions:
-        if region.bounding_box is None:
-            continue
-        key = (region.page_id, region.block_id, region.paragraph_id, region.line_id)
-        line_boxes.setdefault(key, []).append(region.bounding_box)
-    bounds = [_union_boxes(list(boxes)) for boxes in line_boxes.values()]
+        box = region.bounding_box
+        assert box is not None
+        row = next(
+            (
+                row
+                for row in rows
+                if min(row[0].top + row[0].height, box.top + box.height) - max(row[0].top, box.top)
+                >= min(row[0].height, box.height) * 0.5
+            ),
+            None,
+        )
+        if row is None:
+            rows.append([box])
+        else:
+            row.append(box)
+    for row in rows:
+        ordered = sorted(row, key=lambda box: box.left)
+        height = statistics.median(box.height for box in row)
+        if any(
+            right.left - left.left - left.width > height * 4.5
+            for left, right in zip(ordered, ordered[1:], strict=False)
+        ):
+            return WarningCheck(
+                status="review",
+                explanation="A major horizontal gap may separate unrelated warning regions.",
+                evidence=list(localized.source_lines),
+            )
+    bounds = [_union_boxes(row) for row in rows]
     present_bounds = sorted((box for box in bounds if box is not None), key=lambda box: box.top)
     if len(present_bounds) > 1:
         median_height = statistics.median(box.height for box in present_bounds)
@@ -611,6 +626,16 @@ def _continuity_check(localized: LocalizedWarning | None) -> WarningCheck:
                 explanation="A large spatial gap inside the warning requires continuity review.",
                 evidence=list(localized.source_lines),
                 measurements={"largest_interline_gap_px": largest_gap},
+            )
+        if any(
+            min(earlier.left + earlier.width, later.left + later.width)
+            <= max(earlier.left, later.left)
+            for earlier, later in zip(present_bounds, present_bounds[1:], strict=False)
+        ):
+            return WarningCheck(
+                status="review",
+                explanation="Warning rows do not share a coherent horizontal text region.",
+                evidence=list(localized.source_lines),
             )
     return WarningCheck(
         status="match",
@@ -729,12 +754,37 @@ def _contrast_check(localized: LocalizedWarning | None, image_data: bytes) -> Wa
             ),
             measurements=measurements,
         )
-    if contrast >= 0.45 and background_std <= 15 and confidence is not None and confidence >= 0.65:
+    robust = _word_contrast_evidence(localized, image_data)
+    measurements.update(robust)
+    if (
+        contrast >= 0.45
+        and background_std <= 15
+        and confidence is not None
+        and confidence >= 0.65
+        and robust.get("word_contrast_lower_quartile", 0) >= 0.45
+    ):
         return WarningCheck(
             status="match",
             explanation=_sentence(
                 "The crop has strong local luminance separation and a stable",
                 "background; final legibility remains a reviewer judgment.",
+            ),
+            measurements=measurements,
+        )
+    # Whole-crop clustering includes antialiased glyph edges in the background
+    # class. Independently inspect word cores and nearby whitespace rather than
+    # relaxing the background-variation limit (which would accept texture).
+    if (
+        robust.get("word_contrast_lower_quartile", 0) >= 0.55
+        and robust.get("whitespace_spread_upper_quartile", 255) <= 12
+        and confidence is not None
+        and confidence >= 0.85
+    ):
+        return WarningCheck(
+            status="match",
+            explanation=(
+                "Raster evidence shows strong text/background contrast across warning words "
+                "and stable nearby whitespace. This is not proof of physical legibility."
             ),
             measurements=measurements,
         )
@@ -746,6 +796,62 @@ def _contrast_check(localized: LocalizedWarning | None, image_data: bytes) -> Wa
         ),
         measurements=measurements,
     )
+
+
+def _histogram_percentile(image: Image.Image, quantile: float) -> int:
+    target = image.width * image.height * quantile
+    total = 0
+    for level, count in enumerate(image.histogram()):
+        total += count
+        if total > target:
+            return level
+    return 255
+
+
+def _word_contrast_evidence(
+    localized: LocalizedWarning, image_data: bytes
+) -> dict[str, float | int]:
+    contrasts: list[float] = []
+    spreads: list[float] = []
+    with Image.open(BytesIO(image_data)) as source:
+        image = source.convert("L")
+        for region in localized.regions:
+            box = region.bounding_box
+            if box is None or box.height < 12 or len(_word_token(region.text)) < 3:
+                continue
+            pad = max(2, round(box.height * 0.2))
+            if box.top < 2 * pad or box.top + box.height + 2 * pad > image.height:
+                continue
+            crop = image.crop(_pil_box(box))
+            contrasts.append(
+                (_histogram_percentile(crop, 0.9) - _histogram_percentile(crop, 0.1)) / 255
+            )
+            strips = [
+                # Leave a small halo around glyph edges out of the whitespace
+                # measurement; interpolation is not background texture.
+                image.crop((box.left, box.top - 2 * pad, box.left + box.width, box.top - pad)),
+                image.crop(
+                    (
+                        box.left,
+                        box.top + box.height + pad,
+                        box.left + box.width,
+                        box.top + box.height + 2 * pad,
+                    )
+                ),
+            ]
+            spreads.append(
+                max(
+                    _histogram_percentile(strip, 0.9) - _histogram_percentile(strip, 0.1)
+                    for strip in strips
+                )
+            )
+    if len(contrasts) < 8:
+        return {"sampled_contrast_words": len(contrasts)}
+    return {
+        "sampled_contrast_words": len(contrasts),
+        "word_contrast_lower_quartile": round(sorted(contrasts)[len(contrasts) // 4], 3),
+        "whitespace_spread_upper_quartile": sorted(spreads)[3 * len(spreads) // 4],
+    }
 
 
 def _normalize_warning_text(value: str) -> str:
@@ -798,12 +904,19 @@ def _reviewable_wording_damage(
         if max(len(expected_change), len(observed_change)) > 3:
             return False
         if operation != "replace" or len(expected_change) != len(observed_change):
+            if operation == "replace" and "".join(expected_change) == "".join(observed_change):
+                # Joined/split OCR tokens are uncertain evidence, never an exact match.
+                continue
             has_unpaired_change = True
             all_replacements_look_like_ocr = False
             if operation == "delete":
                 deleted_tokens.extend(expected_change)
             continue
         for required, actual in zip(expected_change, observed_change, strict=True):
+            if required == "1" and actual in {"3", "7"} and not localized.regions:
+                # Raw text alone cannot distinguish a misread marker from print.
+                # With reliable TSV evidence the changed number remains a defect.
+                continue
             if not _plausible_ocr_substitution(actual, required):
                 all_replacements_look_like_ocr = False
 
@@ -828,7 +941,7 @@ def _reviewable_wording_damage(
 def _plausible_ocr_substitution(observed: str, expected: str) -> bool:
     if _ocr_equivalent_word(observed, expected):
         return True
-    if expected == "1" and observed in {"3", "7", "l", "i"}:
+    if expected == "1" and observed in {"l", "i"}:
         return True
     if abs(len(observed) - len(expected)) > 2:
         return False
@@ -928,6 +1041,9 @@ def _weight_metrics(
         if box is None or box.width < 3 or box.height < 3:
             continue
         crop = image.crop(_pil_box(box))
+        if _histogram_percentile(crop, 0.9) - _histogram_percentile(crop, 0.1) < 76:
+            # A weight estimate from barely separated tones is not strong visual evidence.
+            continue
         pixels = list(crop.get_flattened_data())
         threshold = _otsu_threshold(pixels)
         dark_mask = [value <= threshold for value in pixels]
