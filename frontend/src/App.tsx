@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { BackendHealth } from './components/BackendHealth';
+import { BatchVerificationWorkflow } from './components/BatchVerificationWorkflow';
 import { LabelOcrWorkflow } from './components/LabelOcrWorkflow';
 
 export default function App() {
+  const [workflow, setWorkflow] = useState<'single' | 'batch'>('single');
   return (
     <>
       <a className="skip-link" href="#main-content">
@@ -16,7 +19,11 @@ export default function App() {
 
       <main id="main-content" className="page-width" tabIndex={-1}>
         <div className="page-intro">
-          <p className="eyebrow">Single-label review</p>
+          <p className="eyebrow">
+            {workflow === 'single'
+              ? 'Single-label review'
+              : 'Optional batch review'}
+          </p>
           <h1>Verify label artwork against application data</h1>
           <p className="lede">
             Enter the values from the COLA application, then upload the
@@ -35,7 +42,28 @@ export default function App() {
           </p>
         </aside>
 
-        <LabelOcrWorkflow />
+        <nav className="workflow-selector" aria-label="Verification workflow">
+          <button
+            type="button"
+            aria-pressed={workflow === 'single'}
+            onClick={() => setWorkflow('single')}
+          >
+            Single label
+          </button>
+          <button
+            type="button"
+            aria-pressed={workflow === 'batch'}
+            onClick={() => setWorkflow('batch')}
+          >
+            Batch verification
+          </button>
+        </nav>
+
+        {workflow === 'single' ? (
+          <LabelOcrWorkflow />
+        ) : (
+          <BatchVerificationWorkflow />
+        )}
       </main>
 
       <footer className="page-width site-footer">

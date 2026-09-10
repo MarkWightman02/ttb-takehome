@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import App from './App';
 
@@ -65,5 +65,25 @@ describe('application shell', () => {
       screen.queryByLabelText('Development connection status'),
     ).not.toBeInTheDocument();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps single-label review as the default and exposes optional batch verification', () => {
+    vi.stubEnv('DEV', false);
+    render(<App />);
+
+    expect(
+      screen.getByRole('button', { name: 'Single label' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Batch verification' }));
+
+    expect(
+      screen.getByRole('button', { name: 'Batch verification' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    expect(
+      screen.getByRole('region', { name: 'Upload application CSV' }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('region', { name: 'Application data' }),
+    ).not.toBeInTheDocument();
   });
 });

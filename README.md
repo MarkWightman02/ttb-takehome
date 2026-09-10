@@ -18,6 +18,34 @@ This hosted prototype is a take-home demonstration, not an official Treasury or 
 
 The application runs local OCR, extracts visible label information, and identifies matches, discrepancies, missing evidence, and uncertain items. It is standalone and does not connect to COLAs Online.
 
+Single-label review remains the default. In this feature branch, select **Batch verification** for
+the optional manifest-based workflow; the stable public deployment is updated separately.
+
+## Optional batch verification
+
+Download the CSV template in the batch view, add one application row per image, select the
+corresponding images, review the deterministic filename mapping, and select **Verify Batch**. Each
+valid item is sent separately to the existing `POST /api/labels/verify` endpoint, so batch and
+single-label review use the same OCR, extraction, comparison, warning analysis, and error behavior.
+
+The CSV columns are:
+
+```text
+image_filename,brand_name,class_type,abv,net_contents,producer_name,producer_address,imported_product,country_origin
+```
+
+Use `true` or `false` for `imported_product`; `country_origin` is required only for imports. The
+parser supports quoted commas, escaped quotes, CRLF, a UTF-8 BOM, and blank optional values.
+Filename matching removes CSV path prefixes and normalizes Unicode composition, surrounding
+whitespace, and case. Duplicate names, missing images, unmatched uploads, unsupported images, and
+invalid rows remain visible rather than being guessed or skipped.
+
+The browser accepts at most 300 manifest records and schedules two verification requests at a
+time. One failed label does not stop the queue, failed items can be retried, and stopping prevents
+new requests while active ones finish. Each row shows a concise outcome and can expand the normal
+detailed result. Results can be exported as CSV. Batch state is browser-local and is discarded on
+reload; the server stores no batch history, application record, or image.
+
 ## Result meanings
 
 - **Match:** image-derived evidence supports the entered application value or checked requirement.
@@ -33,12 +61,13 @@ The application runs local OCR, extracts visible label information, and identifi
 - Country of origin when the reviewer marks the application as imported.
 - Government Health Warning text and available image-based presentation evidence.
 
-Physical type size and characters per inch still require reviewer confirmation because an ordinary raster image has no trustworthy physical scale. The prototype does not implement a comprehensive beverage-regulation engine, batch processing, authentication, persistence, or final regulatory decisions.
+Physical type size and characters per inch still require reviewer confirmation because an ordinary raster image has no trustworthy physical scale. The prototype does not implement a comprehensive beverage-regulation engine, authentication, persistence, or final regulatory decisions.
 
 ## How it works
 
 ```text
 Label image + expected application data
+  → One request, or an optional two-worker browser queue
   → Validation and selective preprocessing/upscaling
   → Full-image Tesseract TSV OCR (PSM 11)
   → Spatial panel reconstruction and warning localization
@@ -55,6 +84,7 @@ Uploaded images are request-scoped and are not persisted by the application. No 
 
 ```text
 frontend/           React + TypeScript + Vite; Vitest and ESLint
+frontend/src/batchVerification.ts  CSV validation, mapping, queue, summaries, export
 backend/app/        FastAPI routes, typed models, validation, preprocessing, local OCR
 backend/tests/      pytest API and foundation checks
 docs/               Requirements matrix and architecture decisions
@@ -226,8 +256,13 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The production bundle omits
 
 - **Synthetic regression:** 18 generated cases completed all 306 expected status checks without an OCR failure. Median total time was about 0.5 seconds.
 - **Real-label regression:** six TTB sample fixtures had a median total under one second; the slowest completed in about 1.2 seconds with the bounded maximum of four OCR calls.
+- **Optional batch check:** a local production container processed one, five, and ten one-call
+  samples in about 0.57, 2.02, and 3.50 seconds respectively at concurrency two. Mean per-item
+  latency was about 0.68 seconds for the concurrent runs, and container memory peaked near 170 MB.
 
-These are repeatable regression measurements from one Linux development host, not production accuracy or latency benchmarks. Generated and real-label results are intentionally reported separately.
+These are repeatable measurements from one Linux development host, not production accuracy,
+latency, or capacity guarantees. Generated and real-label results are intentionally reported
+separately.
 
 ## Docker
 
@@ -259,7 +294,10 @@ docker compose run --rm backend python -m pytest -c backend/pyproject.toml backe
 docker compose run --rm frontend pnpm test
 ```
 
-The container supports raw OCR, complete common-field application-data verification, and warning analysis. The reviewer deployment is available at [https://ttb.markwightman.org](https://ttb.markwightman.org); local and container instructions remain the reproducible submission path.
+The container supports raw OCR, complete common-field application-data verification, optional
+client-orchestrated batch verification, and warning analysis. The reviewer deployment is available
+at [https://ttb.markwightman.org](https://ttb.markwightman.org); local and container instructions
+remain the reproducible submission path.
 
 ## Limitations and tradeoffs
 
@@ -268,8 +306,13 @@ The container supports raw OCR, complete common-field application-data verificat
 - Responsible-party information is not inferred without sufficient label evidence.
 - English is the only bundled OCR language.
 - The prototype is standalone and is not integrated with COLAs Online.
+- Batch state is not persisted or resumable after a browser reload.
 - Generated and sample fixtures are regression evidence, not production-accuracy estimates.
 
 ## Submission status
 
-The scoped single-label prototype is implemented and deployed. Further real-label sampling would improve confidence in deterministic extraction limits, but the generated corpus and six TTB sample fixtures remain deliberately separate and neither is presented as production accuracy evidence.
+The scoped single-label prototype and optional client-side batch enhancement are implemented. The
+stable public deployment may be updated separately after branch review. Further real-label sampling
+would improve confidence in deterministic extraction limits, but the generated corpus and six TTB
+sample fixtures remain deliberately separate and neither is presented as production accuracy
+evidence.

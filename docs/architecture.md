@@ -2,7 +2,7 @@
 
 ## Scope and boundaries
 
-The foundation, local OCR, common application-data verification, and Government Health Warning analysis slices of the [specified prototype](https://github.com/treasurytakehome-rgb/instructions) are implemented. The primary flow is React application fields and image selection → `POST /api/labels/verify` → validation → preprocessing → one full-image local Tesseract invocation → structured extraction → optional bounded regional refinement → application comparison and warning analysis → typed results. `POST /api/labels/ocr` remains available for direct one-pass raw OCR. Product requirements and sources are tracked in [requirements.md](requirements.md).
+The foundation, local OCR, common application-data verification, and Government Health Warning analysis slices of the [specified prototype](https://github.com/treasurytakehome-rgb/instructions) are implemented. The primary flow is React application fields and image selection → `POST /api/labels/verify` → validation → preprocessing → one full-image local Tesseract invocation → structured extraction → optional bounded regional refinement → application comparison and warning analysis → typed results. `POST /api/labels/ocr` remains available for direct one-pass raw OCR. The optional batch view repeats that same verification request through a bounded client-side queue rather than introducing another backend pipeline. Product requirements and sources are tracked in [requirements.md](requirements.md).
 
 React, TypeScript, and Vite own presentation in `frontend/`. FastAPI and Pydantic own the API and typed contracts in `backend/app/`. API routing, response models, service interfaces, and configuration/error handling have separate modules. There is no database or additional service infrastructure.
 
@@ -11,6 +11,15 @@ React, TypeScript, and Vite own presentation in `frontend/`. FastAPI and Pydanti
 During development, the browser sends `/api/health` and the multipart OCR request to Vite on port 5173. Vite proxies `/api` to FastAPI on port 8000. An explicit origin allowlist also supports direct local API calls; credentials are unnecessary. Production serves the compiled frontend and API from one FastAPI process and one origin.
 
 Both label endpoints share the same bounded upload, Pillow validation, worker-thread preprocessing, and configured `OcrService` path. `POST /api/labels/verify` additionally accepts the core fields, producer/bottler name and address, and explicit import applicability with conditional country of origin. Its full-image result remains authoritative for layout and warning analysis; uncertain core fields can request at most three targeted crops from the optional regional OCR capability. The multipart upload is closed in a `finally` block. Starlette may spool multipart content to secure framework-managed temporary storage; the application creates no label file and Tesseract reads PNG bytes from stdin. Image bytes and extracted text are never logged.
+
+Batch CSV parsing and filename mapping occur in the browser. Papa Parse handles quoted fields,
+escaped quotes, CRLF, BOM, and blank values. A required nine-column schema maps directly to the
+shared multipart request builder. Filename normalization strips path prefixes, trims surrounding
+whitespace, applies NFC, and compares case-insensitively; collisions are validation errors. The
+300-record queue has two workers, a 15-second per-request client timeout, no unbounded promise set,
+and no automatic retries. Stopping prevents new scheduling while active requests finish. Successful
+item image references are released; failed or stopped items retain only the `File` needed for
+retry/resume. Results and export remain browser-local and disappear on reload.
 
 ## Extraction and comparison
 
@@ -58,7 +67,13 @@ The health endpoint returns `{"status":"ok","service":"ttb-label-verification"}`
 
 ## Performance and connectivity
 
-The approximately five-second normal-label target remains a product goal. Raw OCR responses report processing and OCR durations; verification responses report total verification, cumulative OCR, refinement duration, call count, and refinement evidence. Full-image OCR is limited to five seconds by default; each of at most three optional crop calls is limited to one second. Uploads are limited to 10 MB, 12,000 pixels per edge, and 40 million pixels. On the audited Linux host, the 18-case generated corpus used one call per case with a roughly 502 ms median and 764 ms slowest total. The six-example real set used a 1.5-call median, 4-call maximum, roughly 957 ms median, and 1.20-second slowest total. Neither small regression set is a general timing or accuracy guarantee. A queue or batch engine is unnecessary for this single-label slice.
+The approximately five-second normal-label target remains a product goal. Raw OCR responses report processing and OCR durations; verification responses report total verification, cumulative OCR, refinement duration, call count, and refinement evidence. Full-image OCR is limited to five seconds by default; each of at most three optional crop calls is limited to one second. Uploads are limited to 10 MB, 12,000 pixels per edge, and 40 million pixels. On the audited Linux host, the 18-case generated corpus used one call per case with a roughly 502 ms median and 764 ms slowest total. The six-example real set used a 1.5-call median, 4-call maximum, roughly 957 ms median, and 1.20-second slowest total. Neither small regression set is a general timing or accuracy guarantee.
+
+The optional queue was checked against the production container with one, five, and ten one-call
+labels at concurrency two. Total times were approximately 0.57, 2.02, and 3.50 seconds; the
+concurrent runs averaged roughly 0.68 seconds per request and container memory peaked near 170 MB.
+This validates bounded scheduling on one host, not general production capacity or 300-label OCR
+latency. A deterministic 300-item queue simulation confirms that only two workers become active.
 
 Runtime verification uses local OCR and image analysis without a mandatory cloud service. Building the container and installing dependencies require package-registry access; a restricted environment can receive a prebuilt image. Runtime health, OCR, and static serving require no outbound connection.
 
@@ -68,4 +83,4 @@ A multi-stage Dockerfile builds React with Node and installs Python dependencies
 
 Docker Compose deliberately runs separate frontend and backend development services for hot reload. This does not change the single-container production target. Versions are pinned in package manifests, the pnpm lockfile, Python constraints, and base-image tags. Tags can receive image rebuilds; digest pinning and image publication remain deployment work.
 
-The absence of application persistence simplifies retention and keeps the prototype standalone. Authentication, COLAs Online integration, batch processing, and production governance are outside this slice. Tesseract currently uses English and page-segmentation mode 11 and may struggle with curved, reflective, rotated, stylized, low-resolution, or poorly photographed labels. The panel model is intentionally lightweight; overlapping panels, circular text, severe perspective, weak column gaps, or reverse-contrast decorative bands can remain ambiguous. OCR confidence and local image heuristics are evidence rather than proof of typeface, physical dimensions, contrast under ordinary conditions, or final compliance. Deterministic extraction may produce `review` or `not_found` outcomes when the source does not yield reliable text. All processing remains local and deterministic; no cloud OCR or LLM is used. The production reviewer deployment is `https://ttb.markwightman.org`.
+The absence of application persistence simplifies retention and keeps the prototype standalone. Batch state is browser-local and intentionally has no resumable history. Authentication, COLAs Online integration, server-side batch jobs, and production governance are outside this slice. Tesseract currently uses English and page-segmentation mode 11 and may struggle with curved, reflective, rotated, stylized, low-resolution, or poorly photographed labels. The panel model is intentionally lightweight; overlapping panels, circular text, severe perspective, weak column gaps, or reverse-contrast decorative bands can remain ambiguous. OCR confidence and local image heuristics are evidence rather than proof of typeface, physical dimensions, contrast under ordinary conditions, or final compliance. Deterministic extraction may produce `review` or `not_found` outcomes when the source does not yield reliable text. All processing remains local and deterministic; no cloud OCR or LLM is used. The production reviewer deployment is `https://ttb.markwightman.org`; deploying the optional batch branch remains a separate release action.

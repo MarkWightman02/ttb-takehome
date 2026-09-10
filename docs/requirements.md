@@ -42,13 +42,13 @@ The [instruction repository][spec], including its stakeholder interviews, is the
 
 The warning checks implement only the cited Part 16 and TTB requirements. Core ABV and volume comparisons use exact normalized numeric equality because no tolerance was introduced. **Plain OCR text cannot establish bold styling. Pixels without trustworthy scale cannot prove millimeters or characters per inch. Unknown visual evidence requires review, not a claimed compliance pass.**
 
-## Important enhancement
+## Optional enhancement
 
 | Requirement | Source / stakeholder | Priority | Implementation | Acceptance criterion |
 | --- | --- | --- | --- | --- |
-| Batch uploads | [Sarah][sarah]; User | Deferred | Outside this single-label prototype | Multiple labels can be submitted together; determine capacity before any future implementation. |
+| Batch uploads | [Sarah][sarah]; User | Implemented as optional workflow | CSV manifest plus browser `File` objects feed a two-worker queue against the existing verification endpoint; maximum 300 records; retry, stop-scheduling, detailed results, and CSV export remain client-side | Multiple labels can be mapped and processed without unbounded requests, server-side state, persistence, or a weaker OCR path. |
 
-The interview's 200–300-application deliveries describe workload context, not a prescribed batch limit.
+The interview's 200–300-application deliveries describe workload context rather than a mandatory core deliverable. The implementation uses 300 as an explicit safety limit and preserves single-label review as the default.
 
 ## Future / out of scope
 
@@ -56,7 +56,7 @@ The interview's 200–300-application deliveries describe workload context, not 
 | --- | --- | --- | --- | --- |
 | Difficult photographs | [Jenny][jenny] | Optional, deferred | Explore angle, lighting and glare handling | Evaluate representative difficult images. |
 | Accessible deployed prototype | [Deliverables][deliverables] | Implemented | Deploy the completed core without changing its standalone architecture | Reviewers can use `https://ttb.markwightman.org`; local and Docker paths remain documented. |
-| Authentication, database, COLAs integration, Kubernetes, microservices and LLM API | User | Excluded from this task | Do not implement | No such components or dependencies are introduced. |
+| Authentication, database, COLAs integration, Kubernetes, microservices, server-side batch jobs and LLM API | User | Excluded from this task | Do not implement | No such components or dependencies are introduced. |
 
 [spec]: https://github.com/treasurytakehome-rgb/instructions
 [sarah]: https://github.com/treasurytakehome-rgb/instructions#interview-notes-sarah-chen-deputy-director-of-label-compliance

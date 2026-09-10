@@ -1,133 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, FormEvent, RefObject } from 'react';
+import { VerificationRequestError, verifyLabel } from '../verification';
+import type {
+  ApplicationValues,
+  FieldName,
+  GovernmentWarningAnalysis,
+  VerificationResponse,
+  VerificationStatus,
+  WarningCheckName,
+} from '../verification';
 
 type WorkflowState = 'idle' | 'loading' | 'success' | 'error';
-type VerificationStatus =
-  'match' | 'review' | 'mismatch' | 'not_found' | 'not_applicable';
-type FieldName =
-  | 'brand_name'
-  | 'class_type'
-  | 'abv'
-  | 'net_contents'
-  | 'producer_name'
-  | 'producer_address'
-  | 'country_origin';
-
-interface ApplicationValues {
-  brand_name: string;
-  class_type: string;
-  abv: string;
-  net_contents: string;
-  producer_name: string;
-  producer_address: string;
-  imported_product: boolean;
-  country_origin: string;
-}
-
-interface ExpectedApplicationData {
-  brand_name: string;
-  class_type: string;
-  abv: number;
-  net_contents: string;
-  producer_name: string;
-  producer_address: string;
-  imported_product: boolean;
-  country_origin: string | null;
-}
-
-interface TextCandidate {
-  raw_value: string;
-  normalized_value: string;
-  source_line: string;
-  line_number: number;
-}
-
-interface NumericCandidate {
-  raw_value: string;
-  source_line: string;
-  line_number: number;
-}
-
-interface ExtractedCandidates {
-  brand_name: TextCandidate[];
-  class_type: TextCandidate[];
-  abv: (NumericCandidate & { normalized_percent: number })[];
-  net_contents: (NumericCandidate & { normalized_ml: number })[];
-  producer_name: TextCandidate[];
-  producer_address: TextCandidate[];
-  country_origin: TextCandidate[];
-}
-
-type WarningCheckName =
-  | 'presence'
-  | 'wording'
-  | 'heading_capitalization'
-  | 'heading_boldness'
-  | 'body_not_bold'
-  | 'continuous_statement'
-  | 'separation'
-  | 'legibility_contrast'
-  | 'type_size'
-  | 'characters_per_inch';
-
-interface WarningCheck {
-  status: VerificationStatus;
-  explanation: string;
-  evidence: string[];
-  measurements: Record<string, string | number | boolean | null>;
-}
-
-interface GovernmentWarningAnalysis {
-  overall_status: VerificationStatus;
-  localized_text: string | null;
-  source_lines: string[];
-  bounding_box: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-    coordinate_space: 'preprocessed_image';
-  } | null;
-  mean_ocr_confidence: number | null;
-  analysis_duration_ms: number;
-  checks: Record<WarningCheckName, WarningCheck>;
-}
-
-interface FieldResult {
-  field: FieldName;
-  expected_raw: string;
-  extracted_raw: string | null;
-  expected_normalized: string | number | null;
-  extracted_normalized: string | number | null;
-  status: VerificationStatus;
-  explanation: string;
-  evidence: string[];
-  similarity_score: number | null;
-}
-
-interface VerificationResponse {
-  expected: ExpectedApplicationData;
-  candidates: ExtractedCandidates;
-  results: Record<FieldName, FieldResult>;
-  government_warning: GovernmentWarningAnalysis;
-  overall_summary: string;
-  raw_text: string;
-  engine: string;
-  total_verification_duration_ms: number;
-  ocr_duration_ms: number;
-  warnings: string[];
-  image: {
-    width: number;
-    height: number;
-    format: 'PNG' | 'JPEG' | 'WEBP';
-  };
-}
-
-interface ApiErrorResponse {
-  error?: { message?: string };
-}
-
-class VerificationRequestError extends Error {}
 
 const ACCEPTED_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -327,37 +210,8 @@ export function LabelOcrWorkflow() {
     setError(null);
     setResult(null);
     setState('loading');
-    const formData = new FormData();
-    formData.append('brand_name', application.brand_name);
-    formData.append('class_type', application.class_type);
-    formData.append('abv', application.abv);
-    formData.append('net_contents', application.net_contents);
-    formData.append('producer_name', application.producer_name);
-    formData.append('producer_address', application.producer_address);
-    formData.append('imported_product', String(application.imported_product));
-    if (application.imported_product) {
-      formData.append('country_origin', application.country_origin);
-    }
-    formData.append('file', selectedFile);
-
     try {
-      const response = await fetch('/api/labels/verify', {
-        method: 'POST',
-        body: formData,
-      });
-      const payload: unknown = await readJson(response);
-      if (!response.ok) {
-        const apiError = payload as ApiErrorResponse;
-        throw new VerificationRequestError(
-          apiError.error?.message ??
-            'The label could not be verified. Try another image.',
-        );
-      }
-      if (!isVerificationResponse(payload)) {
-        throw new VerificationRequestError(
-          'The server returned an unexpected verification response.',
-        );
-      }
+      const payload = await verifyLabel(application, selectedFile);
       setResult(payload);
       setState('success');
     } catch (requestError) {
@@ -534,8 +388,8 @@ export function LabelOcrWorkflow() {
               Verify label
             </StepHeading>
             <p>
-              Run local OCR once, then compare the application fields with
-              extracted label evidence.
+              Run local OCR, then compare the application fields with extracted
+              label evidence.
             </p>
             {error && (
               <div
@@ -648,12 +502,14 @@ function TextField({
   );
 }
 
-function VerificationResults({
+export function VerificationResults({
   result,
   resultRef,
+  idPrefix = '',
 }: {
   result: VerificationResponse;
-  resultRef: RefObject<HTMLDivElement | null>;
+  resultRef?: RefObject<HTMLDivElement | null>;
+  idPrefix?: string;
 }) {
   const statusCounts = (Object.keys(FIELD_LABELS) as FieldName[]).reduce(
     (counts, field) => {
@@ -710,7 +566,10 @@ function VerificationResults({
           );
         })}
       </div>
-      <GovernmentWarningResults warning={result.government_warning} />
+      <GovernmentWarningResults
+        warning={result.government_warning}
+        idPrefix={idPrefix}
+      />
       <details className="ocr-evidence">
         <summary>Inspect raw OCR evidence</summary>
         <div className="result-summary" aria-label="OCR processing details">
@@ -744,16 +603,19 @@ function VerificationResults({
 
 function GovernmentWarningResults({
   warning,
+  idPrefix,
 }: {
   warning: GovernmentWarningAnalysis;
+  idPrefix: string;
 }) {
+  const warningTitleId = `${idPrefix}government-warning-title`;
   return (
     <section
       className="government-warning-results"
-      aria-labelledby="government-warning-title"
+      aria-labelledby={warningTitleId}
     >
       <div className="warning-section-heading">
-        <h3 id="government-warning-title">Government Health Warning</h3>
+        <h3 id={warningTitleId}>Government Health Warning</h3>
         <span className={`status-label status-${warning.overall_status}`}>
           {STATUS_LABELS[warning.overall_status]}
         </span>
@@ -763,35 +625,38 @@ function GovernmentWarningResults({
         presentation issues. Physical type size and characters per inch require
         a trustworthy scale.
       </p>
-      {WARNING_CHECK_GROUPS.map((group) => (
-        <section
-          className="warning-check-group"
-          aria-labelledby={group.id}
-          key={group.id}
-        >
-          <h4 id={group.id}>{group.title}</h4>
-          <p>{group.description}</p>
-          <div className="warning-checks">
-            {group.checks.map((name) => {
-              const check = warning.checks[name];
-              return (
-                <article
-                  className={`warning-check status-${check.status}`}
-                  key={name}
-                >
-                  <div className="warning-check-heading">
-                    <h5>{WARNING_CHECK_LABELS[name]}</h5>
-                    <span className="status-label">
-                      {STATUS_LABELS[check.status]}
-                    </span>
-                  </div>
-                  <p>{check.explanation}</p>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      {WARNING_CHECK_GROUPS.map((group) => {
+        const groupId = `${idPrefix}${group.id}`;
+        return (
+          <section
+            className="warning-check-group"
+            aria-labelledby={groupId}
+            key={group.id}
+          >
+            <h4 id={groupId}>{group.title}</h4>
+            <p>{group.description}</p>
+            <div className="warning-checks">
+              {group.checks.map((name) => {
+                const check = warning.checks[name];
+                return (
+                  <article
+                    className={`warning-check status-${check.status}`}
+                    key={name}
+                  >
+                    <div className="warning-check-heading">
+                      <h5>{WARNING_CHECK_LABELS[name]}</h5>
+                      <span className="status-label">
+                        {STATUS_LABELS[check.status]}
+                      </span>
+                    </div>
+                    <p>{check.explanation}</p>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
       {warning.localized_text && (
         <details className="localized-warning-evidence">
           <summary>Inspect localized warning evidence</summary>
@@ -812,45 +677,6 @@ function GovernmentWarningResults({
       )}
     </section>
   );
-}
-
-function isVerificationResponse(
-  payload: unknown,
-): payload is VerificationResponse {
-  if (typeof payload !== 'object' || payload === null) return false;
-  const candidate = payload as Partial<VerificationResponse>;
-  if (
-    typeof candidate.overall_summary !== 'string' ||
-    typeof candidate.raw_text !== 'string' ||
-    typeof candidate.engine !== 'string' ||
-    typeof candidate.total_verification_duration_ms !== 'number' ||
-    typeof candidate.ocr_duration_ms !== 'number' ||
-    typeof candidate.government_warning !== 'object' ||
-    candidate.government_warning === null ||
-    typeof candidate.results !== 'object' ||
-    candidate.results === null
-  ) {
-    return false;
-  }
-  return (Object.keys(FIELD_LABELS) as FieldName[]).every((field) => {
-    const result = candidate.results?.[field];
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      ['match', 'review', 'mismatch', 'not_found', 'not_applicable'].includes(
-        result.status,
-      ) &&
-      typeof result.explanation === 'string'
-    );
-  });
-}
-
-async function readJson(response: Response): Promise<unknown> {
-  try {
-    return await response.json();
-  } catch {
-    return null;
-  }
 }
 
 function formatDuration(durationMs: number): string {
