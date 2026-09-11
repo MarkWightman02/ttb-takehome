@@ -76,6 +76,9 @@ interface WarningCheck {
 
 export interface GovernmentWarningAnalysis {
   overall_status: VerificationStatus;
+  // Additive server fields; absent on older responses, which stay conservative.
+  automated_status?: VerificationStatus;
+  manual_confirmation_required?: boolean;
   localized_text: string | null;
   source_lines: string[];
   bounding_box: {
@@ -88,6 +91,26 @@ export interface GovernmentWarningAnalysis {
   mean_ocr_confidence: number | null;
   analysis_duration_ms: number;
   checks: Record<WarningCheckName, WarningCheck>;
+}
+
+export const MANUAL_PHYSICAL_WARNING_CHECKS: readonly WarningCheckName[] = [
+  'type_size',
+  'characters_per_inch',
+];
+
+export function automatedWarningStatus(
+  warning: GovernmentWarningAnalysis,
+): VerificationStatus {
+  // The backend's automated_status is the single source of truth (it already
+  // escalates to 'mismatch' for a known physical defect). Only fall back to
+  // legacy overall_status for an older backend response that lacks the field.
+  return warning.automated_status ?? warning.overall_status;
+}
+
+export function manualPhysicalConfirmationRequired(
+  warning: GovernmentWarningAnalysis,
+): boolean {
+  return warning.manual_confirmation_required ?? true;
 }
 
 export interface FieldResult {

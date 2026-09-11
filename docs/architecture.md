@@ -57,6 +57,16 @@ Continuity locates both prescribed clauses semantically, checks their order, ide
 
 Container volume selects the 1/2/3 mm and 40/25/12 CPI regulatory tiers. Physical size and CPI remain `review` because normal raster artwork provides no trustworthy scale. The implementation does not convert arbitrary DPI metadata or pixel counts into physical measurements. This is consistent with [TTB's warning about distortions in submitted label images](https://www.ttb.gov/public-information/industry-circulars/archives/2011/11-04).
 
+`GovernmentWarningAnalysis.automated_status` is computed from the eight text/image checks;
+`manual_confirmation_required` is computed independently from the two physical checks.
+Neither value is supplied by application input. The legacy `overall_status` remains a
+comprehensive status for compatibility. Summaries and batch classification use automated
+status, while still prioritizing any actual mismatch (including a physical mismatch if
+trusted physical evidence is ever supported). Manual-only requirements are displayed
+separately, not as OCR uncertainty. Individual check results and thresholds are unchanged.
+New frontend helpers fall back conservatively to legacy status if the additive fields are
+absent. CSV exports include both statuses and the explicit physical-confirmation flag.
+
 The specification lists common fields but does not define a complete rule set for every beverage. This prototype therefore does not turn that list into unconditional requirements or guess beverage-specific exceptions and regulatory tolerances.
 
 ## Errors and configuration

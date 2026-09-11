@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, DragEvent, FormEvent, RefObject } from 'react';
-import { VerificationRequestError, verifyLabel } from '../verification';
+import {
+  VerificationRequestError,
+  verifyLabel,
+  automatedWarningStatus,
+  manualPhysicalConfirmationRequired,
+  MANUAL_PHYSICAL_WARNING_CHECKS,
+} from '../verification';
 import type {
   ApplicationValues,
   FieldName,
@@ -609,9 +615,9 @@ function GovernmentWarningResults({
   idPrefix: string;
 }) {
   const warningTitleId = `${idPrefix}government-warning-title`;
-  const automatedChecksPassed = Object.entries(warning.checks)
-    .filter(([name]) => name !== 'type_size' && name !== 'characters_per_inch')
-    .every(([, check]) => check.status === 'match');
+  const automatedStatus = automatedWarningStatus(warning);
+  const automatedChecksPassed = automatedStatus === 'match';
+  const manualRequired = manualPhysicalConfirmationRequired(warning);
   return (
     <section
       className="government-warning-results"
@@ -619,14 +625,17 @@ function GovernmentWarningResults({
     >
       <div className="warning-section-heading">
         <h3 id={warningTitleId}>Government Health Warning</h3>
-        <span className={`status-label status-${warning.overall_status}`}>
-          {STATUS_LABELS[warning.overall_status]}
+        <span className={`status-label status-${automatedStatus}`}>
+          {automatedChecksPassed
+            ? 'Automated checks matched'
+            : STATUS_LABELS[automatedStatus]}
         </span>
       </div>
-      {automatedChecksPassed && (
+      {manualRequired && (
         <p>
-          Automated warning checks passed; physical dimensions require manual
-          confirmation.
+          {automatedChecksPassed
+            ? 'Automated warning checks passed; physical dimensions require manual confirmation.'
+            : 'Manual physical confirmation required.'}
         </p>
       )}
       <p className="warning-limit-note">
@@ -647,15 +656,20 @@ function GovernmentWarningResults({
             <div className="warning-checks">
               {group.checks.map((name) => {
                 const check = warning.checks[name];
+                const manualOnly =
+                  MANUAL_PHYSICAL_WARNING_CHECKS.includes(name) &&
+                  check.status === 'review';
                 return (
                   <article
-                    className={`warning-check status-${check.status}`}
+                    className={`warning-check ${manualOnly ? 'manual-physical' : `status-${check.status}`}`}
                     key={name}
                   >
                     <div className="warning-check-heading">
                       <h5>{WARNING_CHECK_LABELS[name]}</h5>
                       <span className="status-label">
-                        {STATUS_LABELS[check.status]}
+                        {manualOnly
+                          ? 'Manual confirmation'
+                          : STATUS_LABELS[check.status]}
                       </span>
                     </div>
                     <p>{check.explanation}</p>

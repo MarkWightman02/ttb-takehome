@@ -28,7 +28,7 @@ const BATCH_STATUS_LABELS: Record<BatchItemStatus, string> = {
   ready: 'Ready',
   queued: 'Queued',
   processing: 'Processing',
-  match: 'All checks matched',
+  match: 'Automated checks matched',
   review: 'Needs review',
   mismatch: 'Contains mismatch',
   processing_error: 'Processing failed',
@@ -562,7 +562,7 @@ function BatchSummary({ items }: { items: MappedBatchItem[] }) {
           <dd>{items.length}</dd>
         </div>
         <div>
-          <dt>All applicable checks matched</dt>
+          <dt>Automated checks matched</dt>
           <dd>{counts.match}</dd>
         </div>
         <div>

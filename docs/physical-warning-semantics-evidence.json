@@ -1,0 +1,1168 @@
+{
+  "baseline_commit": "b7b823b",
+  "description": "Real Tesseract HTTP verification, before/after. All individual field/warning checks and OCR invocation counts unchanged. Only aggregation/presentation changed. T02 uses the explicitly noted diagnostic metric application value, not a fixture rewrite.",
+  "cases": [
+    {
+      "name": "12345",
+      "group": "original",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 1 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 200,
+            "required_minimum_mm": 1,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 40 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 40,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "wording": "review",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "continuous_statement": "review",
+        "separation": "review",
+        "legibility_contrast": "review"
+      },
+      "field_issues": {},
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 1173.5293559904676,
+      "final_ms": 1180.8860250166617,
+      "ocr_calls": 2,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "ABC",
+      "group": "original",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "separation": "review",
+        "legibility_contrast": "review"
+      },
+      "field_issues": {},
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 1090.1744900038466,
+      "final_ms": 1097.9785439849366,
+      "ocr_calls": 2,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "FBN",
+      "group": "original",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 473.176473,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "wording": "review",
+        "continuous_statement": "review",
+        "separation": "review",
+        "legibility_contrast": "review"
+      },
+      "field_issues": {
+        "producer_name": "not_found",
+        "producer_address": "not_found"
+      },
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 859.2991700279526,
+      "final_ms": 872.6696749799885,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "MHB",
+      "group": "original",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 500,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "separation": "review"
+      },
+      "field_issues": {
+        "producer_name": "not_found",
+        "producer_address": "not_found"
+      },
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 1234.1184130054899,
+      "final_ms": 1240.037890005624,
+      "ocr_calls": 4,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T01_harbor_ridge_distilling",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {},
+      "final_summary": "All automated checks matched; physical Government Warning measurements require manual confirmation.",
+      "baseline_ms": 639.5139429951087,
+      "final_ms": 662.9892549826764,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T02_maple_stone_brewing",
+      "group": "synthetic",
+      "metadata_note": "Warning-only evaluation uses the explicit metric component for the physical tier; the compound application input is not supported by the existing form normalizer.",
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 473,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {
+        "net_contents": "review"
+      },
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 627.8015779971611,
+      "final_ms": 639.8972340102773,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T03_northstar_cellars",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {},
+      "final_summary": "All automated checks matched; physical Government Warning measurements require manual confirmation.",
+      "baseline_ms": 624.8811520054005,
+      "final_ms": 677.0158240105957,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T04_sol_dorado_imports",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {},
+      "final_summary": "All automated checks matched; physical Government Warning measurements require manual confirmation.",
+      "baseline_ms": 464.5421130117029,
+      "final_ms": 473.7171189917717,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T05_fjord_house",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 700,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {
+        "class_type": "not_found"
+      },
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 458.80952599691227,
+      "final_ms": 463.8025480089709,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T06_cask_clover",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {},
+      "final_summary": "All automated checks matched; physical Government Warning measurements require manual confirmation.",
+      "baseline_ms": 466.05138399172574,
+      "final_ms": 477.9337730142288,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T07_juniper_works",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 1000,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {
+        "net_contents": "not_found"
+      },
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 680.8653080079239,
+      "final_ms": 699.9813729780726,
+      "ocr_calls": 2,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T08_copper_finch",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 375,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {},
+      "final_summary": "All automated checks matched; physical Government Warning measurements require manual confirmation.",
+      "baseline_ms": 601.1843659798615,
+      "final_ms": 618.9840659790207,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T09_orchard_line",
+      "group": "synthetic",
+      "metadata_note": "Warning-only evaluation uses the explicit metric component for the physical tier; the compound application input is not supported by the existing form normalizer.",
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 355,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {
+        "net_contents": "review"
+      },
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 625.1433760044165,
+      "final_ms": 646.9285270140972,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T10_mesa_roja",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {},
+      "final_summary": "All automated checks matched; physical Government Warning measurements require manual confirmation.",
+      "baseline_ms": 607.9236130171921,
+      "final_ms": 617.2729459940456,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T11_hightide_brewing_co",
+      "group": "synthetic",
+      "metadata_note": "Warning-only evaluation uses the explicit metric component for the physical tier; the compound application input is not supported by the existing form normalizer.",
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 473,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {
+        "net_contents": "review"
+      },
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 461.13222901476547,
+      "final_ms": 469.73547601373866,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T12_ember_grain",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {},
+      "final_summary": "All automated checks matched; physical Government Warning measurements require manual confirmation.",
+      "baseline_ms": 614.7037599876057,
+      "final_ms": 625.7461739878636,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T13_alpine_echo",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {},
+      "final_summary": "All automated checks matched; physical Government Warning measurements require manual confirmation.",
+      "baseline_ms": 456.6679080016911,
+      "final_ms": 464.8581350047607,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T14_blackbird_rum_co",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 1000,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {
+        "brand_name": "not_found"
+      },
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 607.762764004292,
+      "final_ms": 614.8697079916019,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T15_golden_orchard",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "match",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {},
+      "field_issues": {},
+      "final_summary": "All automated checks matched; physical Government Warning measurements require manual confirmation.",
+      "baseline_ms": 631.3503150013275,
+      "final_ms": 637.8861690172926,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T16_blue_lantern_imports",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 720,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "wording": "review",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "legibility_contrast": "review"
+      },
+      "field_issues": {},
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 525.7890130160376,
+      "final_ms": 528.2743439893238,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T17_ironwood_brewery",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 473.176473,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "legibility_contrast": "review"
+      },
+      "field_issues": {},
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 496.55070700100623,
+      "final_ms": 500.5899630195927,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T18_silver_thread_cellars",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "wording": "review",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "legibility_contrast": "review"
+      },
+      "field_issues": {
+        "class_type": "review"
+      },
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 763.0316060094628,
+      "final_ms": 770.7708840025589,
+      "ocr_calls": 2,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T19_meridian_spirits",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 1 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 200,
+            "required_minimum_mm": 1,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 40 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 40,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "wording": "review",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "legibility_contrast": "review"
+      },
+      "field_issues": {},
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 529.4733259943314,
+      "final_ms": 540.1822570129298,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "T20_old_mill_distillery",
+      "group": "synthetic",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "One or more label checks require manual review.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "wording": "review",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "legibility_contrast": "review"
+      },
+      "field_issues": {},
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 512.508068990428,
+      "final_ms": 512.8573600086384,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "WINE",
+      "group": "original",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "heading_boldness": "review",
+        "body_not_bold": "review"
+      },
+      "field_issues": {},
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 746.7890460102353,
+      "final_ms": 746.9883120211307,
+      "ocr_calls": 2,
+      "individual_results_unchanged": true
+    },
+    {
+      "name": "brand-label1",
+      "group": "original",
+      "metadata_note": null,
+      "baseline_warning_status": "review",
+      "baseline_summary": "All automated text checks matched; some visual requirements still require reviewer confirmation.",
+      "automated_warning_status": "review",
+      "legacy_warning_status": "review",
+      "manual_physical_confirmation_required": true,
+      "physical_checks": {
+        "type_size": {
+          "status": "review",
+          "explanation": "A minimum type size of 2 mm applies, but physical type height cannot be established from image pixels without a trustworthy physical scale.",
+          "evidence": [
+            "27 CFR 16.22(b)"
+          ],
+          "measurements": {
+            "container_volume_ml": 750,
+            "required_minimum_mm": 2,
+            "physical_scale_available": false
+          }
+        },
+        "characters_per_inch": {
+          "status": "review",
+          "explanation": "The applicable limit is 25 characters per inch, but pixel width does not establish physical inches without a trustworthy scale.",
+          "evidence": [
+            "27 CFR 16.22(a)(4)"
+          ],
+          "measurements": {
+            "required_maximum_cpi": 25,
+            "physical_scale_available": false
+          }
+        }
+      },
+      "automated_problem_checks": {
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "legibility_contrast": "review"
+      },
+      "field_issues": {},
+      "final_summary": "One or more label checks require manual review.",
+      "baseline_ms": 568.4635909856297,
+      "final_ms": 566.2593719898723,
+      "ocr_calls": 1,
+      "individual_results_unchanged": true
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 from typing import Literal, Self
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, computed_field, model_validator
 
 from app.models.ocr import OcrImageMetadata
 
@@ -124,7 +124,11 @@ class GovernmentWarningChecks(BaseModel):
     characters_per_inch: WarningCheck
 
 
+MANUAL_PHYSICAL_WARNING_CHECKS = ("type_size", "characters_per_inch")
+
+
 class GovernmentWarningAnalysis(BaseModel):
+    # Legacy comprehensive status includes unresolved physical requirements.
     overall_status: VerificationStatus
     localized_text: str | None
     source_lines: list[str] = Field(default_factory=list)
@@ -132,6 +136,39 @@ class GovernmentWarningAnalysis(BaseModel):
     mean_ocr_confidence: float | None = Field(default=None, ge=0, le=1)
     analysis_duration_ms: float = Field(ge=0)
     checks: GovernmentWarningChecks
+
+    @computed_field
+    @property
+    def automated_status(self) -> VerificationStatus:
+        """Describe image-verifiable checks plus any established physical defect.
+
+        Unresolved physical measurements (the ordinary case today, since no
+        trustworthy scale is available) never affect this value beyond
+        ``manual_confirmation_required``. But an actual physical *mismatch* is a
+        known defect, not an open question, so it must escalate here too -
+        this is the single source of truth callers should rely on; do not
+        re-derive this from ``overall_status`` elsewhere.
+        """
+        non_physical = [
+            getattr(self.checks, name).status
+            for name in GovernmentWarningChecks.model_fields
+            if name not in MANUAL_PHYSICAL_WARNING_CHECKS
+        ]
+        physical = [getattr(self.checks, name).status for name in MANUAL_PHYSICAL_WARNING_CHECKS]
+        if "mismatch" in non_physical or "mismatch" in physical:
+            return "mismatch"
+        if self.checks.presence.status == "not_found":
+            return "not_found"
+        if any(status != "match" for status in non_physical):
+            return "review"
+        return "match"
+
+    @computed_field
+    @property
+    def manual_confirmation_required(self) -> bool:
+        return any(
+            getattr(self.checks, name).status != "match" for name in MANUAL_PHYSICAL_WARNING_CHECKS
+        )
 
 
 class RefinementBoundingBox(BaseModel):

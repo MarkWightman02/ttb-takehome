@@ -193,6 +193,17 @@ The prescribed statement and presentation rules come from [27 CFR 16.21](https:/
 - **Image-based evidence:** heading/body weight, continuity, separation, and contrast use OCR geometry and request-scoped pixels. Weak, distorted, or ambiguous evidence remains `review`.
 - **Manual physical confirmation:** the applicable minimum type-size and maximum-characters-per-inch tiers are reported, but actual dimensions remain `review` because raster pixels do not establish millimeters or inches.
 
+Automated warning status and manual physical confirmation are separate. Clean automated
+checks show **Automated checks matched**, with neutral physical cards still marked
+**Manual confirmation**. Genuine OCR/image uncertainty and mismatches continue to take
+priority in the overall summary and batch rows. The API adds `automated_status` and
+`manual_confirmation_required` inside `government_warning`; its legacy `overall_status`
+still includes physical reviews. Batch CSV retains that legacy column and adds
+`automated_warning_status` and `manual_physical_confirmation_required`. Batch `match`
+means automated checks matched, not physical compliance. DPI metadata alone is not trusted.
+See [physical-confirmation semantics](docs/physical-warning-semantics.md) for the decision
+and authoritative references. No PDF or scale-measurement support was added.
+
 These results support reviewer inspection; they are not regulatory approval or a legal-compliance determination. Detailed rules and limitations are documented in [architecture.md](docs/architecture.md).
 
 ### Run the frontend

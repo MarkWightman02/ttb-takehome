@@ -1,0 +1,2673 @@
+{
+  "heldout": [
+    {
+      "name": "chimes_brewhouse",
+      "crop": [
+        50,
+        3,
+        321,
+        350
+      ],
+      "visible": {
+        "brand_name": "Chimes Brewhouse",
+        "class_type": "India Pale Ale",
+        "abv": null,
+        "net_contents": "10 fl. oz.",
+        "producer_name": null,
+        "producer_address": null,
+        "country_origin": null
+      },
+      "notes": "City Cincinnati, Ohio is printed without a responsible-party cue. Import status not stated. Warning absent from front artwork.",
+      "ocr_text": "chimes\nBreWNOuse\nIndia Pale Ale",
+      "ocr_calls": 2,
+      "ocr_ms": 171.99632497795392,
+      "total_ms": 342.4721900082659,
+      "initial_candidates": {
+        "brand_name": [
+          {
+            "raw_value": "chimes BreWNOuse",
+            "normalized_value": "chimes brewnouse",
+            "source_line": "chimes BreWNOuse",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "India Pale Ale",
+            "normalized_value": "india pale ale",
+            "source_line": "India Pale Ale",
+            "line_number": 3
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "candidates": {
+        "brand_name": [
+          {
+            "raw_value": "chimes BreWNOuse",
+            "normalized_value": "chimes brewnouse",
+            "source_line": "chimes BreWNOuse",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "India Pale Ale",
+            "normalized_value": "india pale ale",
+            "source_line": "India Pale Ale",
+            "line_number": 3
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "source": "https://www.ttb.gov/system/files/images/labels/Slide9.jpg",
+      "fields": {
+        "brand_name": {
+          "visible": "Chimes Brewhouse",
+          "extracted": "chimes BreWNOuse",
+          "status": "review",
+          "before_status": "review",
+          "pass1_extracted": "chimes BreWNOuse",
+          "source": "full_image",
+          "confidence": 0.46537952,
+          "evidence": [
+            "chimes BreWNOuse"
+          ]
+        },
+        "class_type": {
+          "visible": "India Pale Ale",
+          "extracted": "India Pale Ale",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "India Pale Ale",
+          "source": "full_image",
+          "confidence": 0.9596350333333333,
+          "evidence": [
+            "India Pale Ale"
+          ]
+        },
+        "abv": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "net_contents": {
+          "visible": "10 fl. oz.",
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_name": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_address": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "country_origin": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_applicable",
+          "before_status": "not_applicable",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        }
+      },
+      "refinements": [
+        {
+          "field": "brand_name",
+          "trigger": "Full-image brand_name has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "chimes BreWNOuse"
+          ],
+          "refined_text": "chimes\nBrewiOuse",
+          "selected": false,
+          "page_segmentation_mode": 6,
+          "mean_confidence": 0.22907402,
+          "duration_ms": 53.230113990139216,
+          "crop": {
+            "left": 67,
+            "top": 77,
+            "width": 928,
+            "height": 647,
+            "coordinate_space": "preprocessed_image"
+          }
+        }
+      ],
+      "warning": {
+        "presence": "not_found",
+        "wording": "not_found",
+        "heading_capitalization": "not_found",
+        "heading_boldness": "not_found",
+        "body_not_bold": "not_found",
+        "continuous_statement": "not_found",
+        "separation": "not_found",
+        "legibility_contrast": "not_found",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "warning_details": {
+        "status": "not_found",
+        "explanation": "Required warning wording could not be checked because no warning was located.",
+        "evidence": [],
+        "measurements": {}
+      }
+    },
+    {
+      "name": "chimes_vineyard",
+      "crop": [
+        5,
+        0,
+        289,
+        355
+      ],
+      "visible": {
+        "brand_name": "Chimes vineyard",
+        "class_type": "Chardonnay",
+        "abv": 12.5,
+        "net_contents": "750 ml",
+        "producer_name": null,
+        "producer_address": null,
+        "country_origin": null
+      },
+      "notes": "Washington appellation; import status not stated; warning absent from front.",
+      "ocr_text": "Ghimes\nvineVaira\nWashington\nChardonnay",
+      "ocr_calls": 2,
+      "ocr_ms": 192.41514799068682,
+      "total_ms": 367.4853789998451,
+      "initial_candidates": {
+        "brand_name": [
+          {
+            "raw_value": "Ghimes vineVaira",
+            "normalized_value": "ghimes vinevaira",
+            "source_line": "Ghimes vineVaira",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "Chardonnay",
+            "normalized_value": "chardonnay",
+            "source_line": "Chardonnay",
+            "line_number": 4
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "candidates": {
+        "brand_name": [
+          {
+            "raw_value": "Ghimes vineVaira",
+            "normalized_value": "ghimes vinevaira",
+            "source_line": "Ghimes vineVaira",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "Chardonnay",
+            "normalized_value": "chardonnay",
+            "source_line": "Chardonnay",
+            "line_number": 4
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "source": "https://www.ttb.gov/system/files/images/labels/Slide7.jpg",
+      "fields": {
+        "brand_name": {
+          "visible": "Chimes vineyard",
+          "extracted": "Ghimes vineVaira",
+          "status": "mismatch",
+          "before_status": "mismatch",
+          "pass1_extracted": "Ghimes vineVaira",
+          "source": "full_image",
+          "confidence": 0.60022995,
+          "evidence": [
+            "Ghimes vineVaira"
+          ]
+        },
+        "class_type": {
+          "visible": "Chardonnay",
+          "extracted": "Chardonnay",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "Chardonnay",
+          "source": "full_image",
+          "confidence": 0.96112259,
+          "evidence": [
+            "Chardonnay"
+          ]
+        },
+        "abv": {
+          "visible": 12.5,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "net_contents": {
+          "visible": "750 ml",
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_name": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_address": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "country_origin": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_applicable",
+          "before_status": "not_applicable",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        }
+      },
+      "refinements": [
+        {
+          "field": "brand_name",
+          "trigger": "Full-image brand_name has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "Ghimes vineVaira"
+          ],
+          "refined_text": "chimes\nvineVare",
+          "selected": false,
+          "page_segmentation_mode": 6,
+          "mean_confidence": 0.056119845,
+          "duration_ms": 57.48146898986306,
+          "crop": {
+            "left": 100,
+            "top": 90,
+            "width": 916,
+            "height": 657,
+            "coordinate_space": "preprocessed_image"
+          }
+        }
+      ],
+      "warning": {
+        "presence": "not_found",
+        "wording": "not_found",
+        "heading_capitalization": "not_found",
+        "heading_boldness": "not_found",
+        "body_not_bold": "not_found",
+        "continuous_statement": "not_found",
+        "separation": "not_found",
+        "legibility_contrast": "not_found",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "warning_details": {
+        "status": "not_found",
+        "explanation": "Required warning wording could not be checked because no warning was located.",
+        "evidence": [],
+        "measurements": {}
+      }
+    },
+    {
+      "name": "woodson_brandy",
+      "crop": [
+        12,
+        4,
+        321,
+        285
+      ],
+      "visible": {
+        "brand_name": "Woodson",
+        "class_type": "Brandy",
+        "abv": 40,
+        "net_contents": "375 ml",
+        "producer_name": null,
+        "producer_address": null,
+        "country_origin": null
+      },
+      "notes": "Age statement present. Warning/responsible party absent from front.",
+      "ocr_text": "Woodsou\nBrandy\nws",
+      "ocr_calls": 2,
+      "ocr_ms": 145.33698599552736,
+      "total_ms": 440.4604050068883,
+      "initial_candidates": {
+        "brand_name": [
+          {
+            "raw_value": "Woodsou",
+            "normalized_value": "woodsou",
+            "source_line": "Woodsou",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "Brandy",
+            "normalized_value": "brandy",
+            "source_line": "Brandy",
+            "line_number": 2
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "candidates": {
+        "brand_name": [
+          {
+            "raw_value": "Woodsou",
+            "normalized_value": "woodsou",
+            "source_line": "Woodsou",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "Brandy",
+            "normalized_value": "brandy",
+            "source_line": "Brandy",
+            "line_number": 2
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "source": "https://www.ttb.gov/system/files/images/labels/Slide24.jpg",
+      "fields": {
+        "brand_name": {
+          "visible": "Woodson",
+          "extracted": "Woodsou",
+          "status": "review",
+          "before_status": "review",
+          "pass1_extracted": "Woodsou",
+          "source": "full_image",
+          "confidence": 0.49471207,
+          "evidence": [
+            "Woodsou"
+          ]
+        },
+        "class_type": {
+          "visible": "Brandy",
+          "extracted": "Brandy",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "Brandy",
+          "source": "full_image",
+          "confidence": 0.9491507,
+          "evidence": [
+            "Brandy"
+          ]
+        },
+        "abv": {
+          "visible": 40,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "net_contents": {
+          "visible": "375 ml",
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_name": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_address": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "country_origin": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_applicable",
+          "before_status": "not_applicable",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        }
+      },
+      "refinements": [
+        {
+          "field": "brand_name",
+          "trigger": "Full-image brand_name has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "Woodsou"
+          ],
+          "refined_text": "Woodson",
+          "selected": false,
+          "page_segmentation_mode": 6,
+          "mean_confidence": 0,
+          "duration_ms": 46.90050600038376,
+          "crop": {
+            "left": 212,
+            "top": 127,
+            "width": 809,
+            "height": 218,
+            "coordinate_space": "preprocessed_image"
+          }
+        }
+      ],
+      "warning": {
+        "presence": "not_found",
+        "wording": "not_found",
+        "heading_capitalization": "not_found",
+        "heading_boldness": "not_found",
+        "body_not_bold": "not_found",
+        "continuous_statement": "not_found",
+        "separation": "not_found",
+        "legibility_contrast": "not_found",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "warning_details": {
+        "status": "not_found",
+        "explanation": "Required warning wording could not be checked because no warning was located.",
+        "evidence": [],
+        "measurements": {}
+      }
+    },
+    {
+      "name": "montainia_ale",
+      "crop": [
+        39,
+        3,
+        303,
+        351
+      ],
+      "visible": {
+        "brand_name": "Pont du MONTAINIA",
+        "class_type": "French Ale",
+        "abv": null,
+        "net_contents": "1 Pt. 9.4 Fl. Oz.",
+        "producer_name": "AC France Shipping",
+        "producer_address": null,
+        "country_origin": null
+      },
+      "notes": "Also prints Biere de Garde and Ambree; descriptive class alternatives must be treated conservatively. Shipped by AC France Shipping is a responsible-role statement. French Ale is not an explicit country-origin cue.",
+      "ocr_text": "Pant au\nMONTAINIA\n= os\nSaar\nja. i rr ia ee\n——— —-\nFrench Ale\n1 Pt. 9.4 FI. Oz\nShipped by AC France Shipping",
+      "ocr_calls": 3,
+      "ocr_ms": 265.94670800841413,
+      "total_ms": 498.92208399251103,
+      "initial_candidates": {
+        "brand_name": [
+          {
+            "raw_value": "Pant au MONTAINIA",
+            "normalized_value": "pant au montainia",
+            "source_line": "Pant au MONTAINIA",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "French Ale",
+            "normalized_value": "french ale",
+            "source_line": "French Ale",
+            "line_number": 6
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "candidates": {
+        "brand_name": [
+          {
+            "raw_value": "Pant au MONTAINIA",
+            "normalized_value": "pant au montainia",
+            "source_line": "Pant au MONTAINIA",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "French Ale",
+            "normalized_value": "french ale",
+            "source_line": "French Ale",
+            "line_number": 6
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "source": "https://www.ttb.gov/system/files/images/labels/Slide39.jpg",
+      "fields": {
+        "brand_name": {
+          "visible": "Pont du MONTAINIA",
+          "extracted": "Pant au MONTAINIA",
+          "status": "review",
+          "before_status": "review",
+          "pass1_extracted": "Pant au MONTAINIA",
+          "source": "full_image",
+          "confidence": 0.72124184,
+          "evidence": [
+            "Pant au MONTAINIA"
+          ]
+        },
+        "class_type": {
+          "visible": "French Ale",
+          "extracted": "French Ale",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "French Ale",
+          "source": "full_image",
+          "confidence": 0,
+          "evidence": [
+            "French Ale"
+          ]
+        },
+        "abv": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "net_contents": {
+          "visible": "1 Pt. 9.4 Fl. Oz.",
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "mismatch",
+          "pass1_extracted": "1 Pt",
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_name": {
+          "visible": "AC France Shipping",
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_address": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "country_origin": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_applicable",
+          "before_status": "not_applicable",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        }
+      },
+      "refinements": [
+        {
+          "field": "brand_name",
+          "trigger": "Full-image brand_name has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "Pant au MONTAINIA"
+          ],
+          "refined_text": "&.\nJe asic",
+          "selected": false,
+          "page_segmentation_mode": 6,
+          "mean_confidence": 0.34448620999999996,
+          "duration_ms": 65.18373200378846,
+          "crop": {
+            "left": 196,
+            "top": 191,
+            "width": 650,
+            "height": 296,
+            "coordinate_space": "preprocessed_image"
+          }
+        },
+        {
+          "field": "class_type",
+          "trigger": "Full-image class_type has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "French Ale"
+          ],
+          "refined_text": "FrenchAle",
+          "selected": false,
+          "page_segmentation_mode": 7,
+          "mean_confidence": 0.87519211,
+          "duration_ms": 49.697783004376106,
+          "crop": {
+            "left": 206,
+            "top": 1233,
+            "width": 219,
+            "height": 56,
+            "coordinate_space": "preprocessed_image"
+          }
+        }
+      ],
+      "warning": {
+        "presence": "not_found",
+        "wording": "not_found",
+        "heading_capitalization": "not_found",
+        "heading_boldness": "not_found",
+        "body_not_bold": "not_found",
+        "continuous_statement": "not_found",
+        "separation": "not_found",
+        "legibility_contrast": "not_found",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "warning_details": {
+        "status": "not_found",
+        "explanation": "Required warning wording could not be checked because no warning was located.",
+        "evidence": [],
+        "measurements": {}
+      }
+    },
+    {
+      "name": "montainia_rum",
+      "crop": [
+        42,
+        0,
+        309,
+        348
+      ],
+      "visible": {
+        "brand_name": "HOUSE OF MONTAINIA",
+        "class_type": "GOLD RUM",
+        "abv": 40,
+        "net_contents": "750 ml",
+        "producer_name": "SE Ltd.",
+        "producer_address": "Kingston, JAMAICA",
+        "country_origin": null
+      },
+      "notes": "Jamaican descriptor; side-rotated Shipped by SE Ltd. Kingston, JAMAICA. Origin must not be inferred solely from address; imported context, but no explicit supported origin statement.",
+      "ocr_text": "HOUSE OF\nMONTAINIA\noe,\nEss\n=\nU\n=\npreceeee\n=\nBIRGACAI\nGOLD RUM\n40% alc./vol. (SO proof) 750 ml",
+      "ocr_calls": 2,
+      "ocr_ms": 189.52361101401038,
+      "total_ms": 410.78670498973224,
+      "initial_candidates": {
+        "brand_name": [
+          {
+            "raw_value": "HOUSE OF MONTAINIA",
+            "normalized_value": "house of montainia",
+            "source_line": "HOUSE OF MONTAINIA",
+            "line_number": 1
+          },
+          {
+            "raw_value": "oe, U",
+            "normalized_value": "oe u",
+            "source_line": "oe, U",
+            "line_number": 3
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "GOLD RUM",
+            "normalized_value": "gold rum",
+            "source_line": "GOLD RUM",
+            "line_number": 11
+          }
+        ],
+        "abv": [
+          {
+            "raw_value": "40% alc./vol.",
+            "normalized_percent": 40,
+            "source_line": "40% alc./vol. (SO proof) 750 ml",
+            "line_number": 12
+          }
+        ],
+        "net_contents": [
+          {
+            "raw_value": "750 ml",
+            "normalized_ml": 750,
+            "source_line": "40% alc./vol. (SO proof) 750 ml",
+            "line_number": 12
+          }
+        ],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "candidates": {
+        "brand_name": [
+          {
+            "raw_value": "HOUSE OF MONTAINIA",
+            "normalized_value": "house of montainia",
+            "source_line": "HOUSE OF MONTAINIA",
+            "line_number": 1
+          },
+          {
+            "raw_value": "oe, U",
+            "normalized_value": "oe u",
+            "source_line": "oe, U",
+            "line_number": 3
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "GOLD RUM",
+            "normalized_value": "gold rum",
+            "source_line": "GOLD RUM",
+            "line_number": 11
+          }
+        ],
+        "abv": [
+          {
+            "raw_value": "40% alc./vol.",
+            "normalized_percent": 40,
+            "source_line": "40% alc./vol. (SO proof) 750 ml",
+            "line_number": 12
+          }
+        ],
+        "net_contents": [
+          {
+            "raw_value": "750 ml",
+            "normalized_ml": 750,
+            "source_line": "40% alc./vol. (SO proof) 750 ml",
+            "line_number": 12
+          }
+        ],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "source": "https://www.ttb.gov/system/files/images/labels/Slide38.jpg",
+      "fields": {
+        "brand_name": {
+          "visible": "HOUSE OF MONTAINIA",
+          "extracted": "HOUSE OF MONTAINIA",
+          "status": "review",
+          "before_status": "review",
+          "pass1_extracted": "‘ HOUSE OF > MONTAINLA",
+          "source": "full_image",
+          "confidence": 0.9665664700000001,
+          "evidence": [
+            "HOUSE OF MONTAINIA",
+            "oe, U"
+          ]
+        },
+        "class_type": {
+          "visible": "GOLD RUM",
+          "extracted": "GOLD RUM",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "GOLD RUM",
+          "source": "full_image",
+          "confidence": 0.950679625,
+          "evidence": [
+            "GOLD RUM"
+          ]
+        },
+        "abv": {
+          "visible": 40,
+          "extracted": "40% alc./vol.",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "40% alc./vol.",
+          "source": "full_image",
+          "confidence": 0.8292021049999999,
+          "evidence": [
+            "40% alc./vol. (SO proof) 750 ml"
+          ]
+        },
+        "net_contents": {
+          "visible": "750 ml",
+          "extracted": "750 ml",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "750 ml",
+          "source": "full_image",
+          "confidence": 0.8292021049999999,
+          "evidence": [
+            "40% alc./vol. (SO proof) 750 ml"
+          ]
+        },
+        "producer_name": {
+          "visible": "SE Ltd.",
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_address": {
+          "visible": "Kingston, JAMAICA",
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "country_origin": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        }
+      },
+      "refinements": [
+        {
+          "field": "brand_name",
+          "trigger": "Full-image brand_name has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "HOUSE OF MONTAINIA",
+            "oe, U"
+          ],
+          "refined_text": "‘ HOUSE OF >\nMONTAINLA",
+          "selected": false,
+          "page_segmentation_mode": 6,
+          "mean_confidence": 0.713350122,
+          "duration_ms": 58.23768500704318,
+          "crop": {
+            "left": 290,
+            "top": 254,
+            "width": 481,
+            "height": 205,
+            "coordinate_space": "preprocessed_image"
+          }
+        }
+      ],
+      "warning": {
+        "presence": "not_found",
+        "wording": "not_found",
+        "heading_capitalization": "not_found",
+        "heading_boldness": "not_found",
+        "body_not_bold": "not_found",
+        "continuous_statement": "not_found",
+        "separation": "not_found",
+        "legibility_contrast": "not_found",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "warning_details": {
+        "status": "not_found",
+        "explanation": "Required warning wording could not be checked because no warning was located.",
+        "evidence": [],
+        "measurements": {}
+      }
+    },
+    {
+      "name": "sunnyside_acres",
+      "crop": [
+        0,
+        3,
+        341,
+        393
+      ],
+      "visible": {
+        "brand_name": "SUNNYSIDE ACRES",
+        "class_type": "WHITE WINE",
+        "abv": null,
+        "net_contents": null,
+        "producer_name": null,
+        "producer_address": null,
+        "country_origin": null
+      },
+      "notes": "Finger Lakes/New York appellation. Front only; ABV, volume, responsible party and warning absent.",
+      "ocr_text": "SUNNYSIDE ACRES\na.\" 9 A:\nA\n“oy\nFinger Lakes\nNew York\nWHITE WINE",
+      "ocr_calls": 2,
+      "ocr_ms": 243.8033940125024,
+      "total_ms": 454.25012199848425,
+      "initial_candidates": {
+        "brand_name": [
+          {
+            "raw_value": "SUNNYSIDE ACRES a.\" 9 A:",
+            "normalized_value": "sunnyside acres a 9 a",
+            "source_line": "SUNNYSIDE ACRES a.\" 9 A:",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "WHITE WINE",
+            "normalized_value": "white wine",
+            "source_line": "WHITE WINE",
+            "line_number": 7
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "candidates": {
+        "brand_name": [
+          {
+            "raw_value": "SUNNYSIDE ACRES a.\" 9 A:",
+            "normalized_value": "sunnyside acres a 9 a",
+            "source_line": "SUNNYSIDE ACRES a.\" 9 A:",
+            "line_number": 1
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "WHITE WINE",
+            "normalized_value": "white wine",
+            "source_line": "WHITE WINE",
+            "line_number": 7
+          }
+        ],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "source": "https://www.ttb.gov/system/files/images/labels/Slide4.jpg",
+      "fields": {
+        "brand_name": {
+          "visible": "SUNNYSIDE ACRES",
+          "extracted": "SUNNYSIDE ACRES a.\" 9 A:",
+          "status": "review",
+          "before_status": "review",
+          "pass1_extracted": "SUNNYSIDE ACRES a.\" 9 A:",
+          "source": "full_image",
+          "confidence": 0.9630859350000001,
+          "evidence": [
+            "SUNNYSIDE ACRES a.\" 9 A:"
+          ]
+        },
+        "class_type": {
+          "visible": "WHITE WINE",
+          "extracted": "WHITE WINE",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "WHITE WINE",
+          "source": "full_image",
+          "confidence": 0.91664394,
+          "evidence": [
+            "WHITE WINE"
+          ]
+        },
+        "abv": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "net_contents": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_name": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_address": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "country_origin": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_applicable",
+          "before_status": "not_applicable",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        }
+      },
+      "refinements": [
+        {
+          "field": "brand_name",
+          "trigger": "Full-image brand_name has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "SUNNYSIDE ACRES a.\" 9 A:"
+          ],
+          "refined_text": "SUNNYSIDE ACRES\nae\\.\nPA JON\nfine \\.",
+          "selected": false,
+          "page_segmentation_mode": 6,
+          "mean_confidence": 0.43512099000000004,
+          "duration_ms": 112.4700210057199,
+          "crop": {
+            "left": 41,
+            "top": 70,
+            "width": 1242,
+            "height": 792,
+            "coordinate_space": "preprocessed_image"
+          }
+        }
+      ],
+      "warning": {
+        "presence": "not_found",
+        "wording": "not_found",
+        "heading_capitalization": "not_found",
+        "heading_boldness": "not_found",
+        "body_not_bold": "not_found",
+        "continuous_statement": "not_found",
+        "separation": "not_found",
+        "legibility_contrast": "not_found",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "warning_details": {
+        "status": "not_found",
+        "explanation": "Required warning wording could not be checked because no warning was located.",
+        "evidence": [],
+        "measurements": {}
+      }
+    },
+    {
+      "name": "rainy_day",
+      "crop": [
+        429,
+        6,
+        843,
+        392
+      ],
+      "visible": {
+        "brand_name": "Rainy Day",
+        "class_type": "Albariño",
+        "abv": 12.5,
+        "net_contents": "750 ml",
+        "producer_name": null,
+        "producer_address": null,
+        "country_origin": null
+      },
+      "notes": "Printed varietal is Albariño (tilde); visible heading Wine for a. Right-side unannotated artwork, Virginia appellation; no warning or responsible-party evidence.",
+      "ocr_text": "Wine fora\nRainy Day\nGg\nAlbarino\ni\nEY)\nVirginia\n2014\n12.5% Alc. by Vol\n750m!",
+      "ocr_calls": 3,
+      "ocr_ms": 249.01749500713777,
+      "total_ms": 467.3918339976808,
+      "initial_candidates": {
+        "brand_name": [
+          {
+            "raw_value": "Rainy Day",
+            "normalized_value": "rainy day",
+            "source_line": "Rainy Day",
+            "line_number": 2
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "Wine fora",
+            "normalized_value": "wine fora",
+            "source_line": "Wine fora",
+            "line_number": 1
+          }
+        ],
+        "abv": [
+          {
+            "raw_value": "12.5% Alc. by Vol",
+            "normalized_percent": 12.5,
+            "source_line": "12.5% Alc. by Vol",
+            "line_number": 6
+          }
+        ],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "candidates": {
+        "brand_name": [
+          {
+            "raw_value": "Rainy Day",
+            "normalized_value": "rainy day",
+            "source_line": "Rainy Day",
+            "line_number": 2
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "Wine fora",
+            "normalized_value": "wine fora",
+            "source_line": "Wine fora",
+            "line_number": 1
+          }
+        ],
+        "abv": [
+          {
+            "raw_value": "12.5% Alc. by Vol",
+            "normalized_percent": 12.5,
+            "source_line": "12.5% Alc. by Vol",
+            "line_number": 6
+          }
+        ],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "source": "https://www.ttb.gov/system/files/images/labels/Slide1.jpg",
+      "fields": {
+        "brand_name": {
+          "visible": "Rainy Day",
+          "extracted": "Rainy Day",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "Rainy Day",
+          "source": "full_image",
+          "confidence": 0.9628352,
+          "evidence": [
+            "Rainy Day"
+          ]
+        },
+        "class_type": {
+          "visible": "Albariño",
+          "extracted": "Wine fora",
+          "status": "mismatch",
+          "before_status": "mismatch",
+          "pass1_extracted": "Wine fora",
+          "source": "regional",
+          "confidence": 0.8808647949999999,
+          "evidence": [
+            "Wine fora"
+          ]
+        },
+        "abv": {
+          "visible": 12.5,
+          "extracted": "12.5% Alc. by Vol",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "12.5% Alc. by Vol",
+          "source": "full_image",
+          "confidence": 0.9479537575,
+          "evidence": [
+            "12.5% Alc. by Vol"
+          ]
+        },
+        "net_contents": {
+          "visible": "750 ml",
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_name": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_address": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "country_origin": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_applicable",
+          "before_status": "not_applicable",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        }
+      },
+      "refinements": [
+        {
+          "field": "net_contents",
+          "trigger": "No full-image volume was found near a prominent lower-panel text region.",
+          "full_image_candidates": [],
+          "refined_text": "2014",
+          "selected": false,
+          "page_segmentation_mode": 7,
+          "mean_confidence": 0.9586195399999999,
+          "duration_ms": 48.912350001046434,
+          "crop": {
+            "left": 264,
+            "top": 1112,
+            "width": 245,
+            "height": 92,
+            "coordinate_space": "preprocessed_image"
+          }
+        },
+        {
+          "field": "class_type",
+          "trigger": "Full-image class_type has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "Wine fora"
+          ],
+          "refined_text": "Wine fora",
+          "selected": true,
+          "page_segmentation_mode": 7,
+          "mean_confidence": 0.8808647949999999,
+          "duration_ms": 47.57994100509677,
+          "crop": {
+            "left": 116,
+            "top": 106,
+            "width": 348,
+            "height": 137,
+            "coordinate_space": "preprocessed_image"
+          }
+        }
+      ],
+      "warning": {
+        "presence": "not_found",
+        "wording": "not_found",
+        "heading_capitalization": "not_found",
+        "heading_boldness": "not_found",
+        "body_not_bold": "not_found",
+        "continuous_statement": "not_found",
+        "separation": "not_found",
+        "legibility_contrast": "not_found",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "warning_details": {
+        "status": "not_found",
+        "explanation": "Required warning wording could not be checked because no warning was located.",
+        "evidence": [],
+        "measurements": {}
+      }
+    },
+    {
+      "name": "pollys_rum",
+      "crop": [
+        444,
+        5,
+        851,
+        390
+      ],
+      "visible": {
+        "brand_name": "Polly's",
+        "class_type": "Spiced Rum",
+        "abv": 20,
+        "net_contents": "1 L",
+        "producer_name": null,
+        "producer_address": null,
+        "country_origin": null
+      },
+      "notes": "Also prints Rum with Natural Flavors. Right-side unannotated front; warning and responsible party absent.",
+      "ocr_text": "Pty s Spiced Rum\nRum with Natural Flavors\ne,\niL\n20% alc. by vol.",
+      "ocr_calls": 3,
+      "ocr_ms": 233.5464450006839,
+      "total_ms": 411.30503700696863,
+      "initial_candidates": {
+        "brand_name": [
+          {
+            "raw_value": "e,",
+            "normalized_value": "e",
+            "source_line": "e,",
+            "line_number": 2
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "Pty s Spiced Rum",
+            "normalized_value": "pty s spiced rum",
+            "source_line": "Pty s Spiced Rum",
+            "line_number": 1
+          },
+          {
+            "raw_value": "Rum with Natural Flavors",
+            "normalized_value": "rum with natural flavors",
+            "source_line": "Rum with Natural Flavors",
+            "line_number": 4
+          }
+        ],
+        "abv": [
+          {
+            "raw_value": "20% alc. by vol.",
+            "normalized_percent": 20,
+            "source_line": "20% alc. by vol.",
+            "line_number": 3
+          }
+        ],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "candidates": {
+        "brand_name": [
+          {
+            "raw_value": "e,",
+            "normalized_value": "e",
+            "source_line": "e,",
+            "line_number": 2
+          }
+        ],
+        "class_type": [
+          {
+            "raw_value": "Potty's Spiced Rum",
+            "normalized_value": "pottys spiced rum",
+            "source_line": "Potty's Spiced Rum",
+            "line_number": 1
+          }
+        ],
+        "abv": [
+          {
+            "raw_value": "20% alc. by vol.",
+            "normalized_percent": 20,
+            "source_line": "20% alc. by vol.",
+            "line_number": 3
+          }
+        ],
+        "net_contents": [],
+        "producer_name": [],
+        "producer_address": [],
+        "country_origin": []
+      },
+      "source": "https://www.ttb.gov/system/files/images/labels/Slide2.jpg",
+      "fields": {
+        "brand_name": {
+          "visible": "Polly's",
+          "extracted": "e,",
+          "status": "mismatch",
+          "before_status": "mismatch",
+          "pass1_extracted": "e,",
+          "source": "full_image",
+          "confidence": 0,
+          "evidence": [
+            "e,"
+          ]
+        },
+        "class_type": {
+          "visible": "Spiced Rum",
+          "extracted": "Potty's Spiced Rum",
+          "status": "review",
+          "before_status": "review",
+          "pass1_extracted": "Potty's Spiced Rum",
+          "source": "regional",
+          "confidence": 0.6997343933333333,
+          "evidence": [
+            "Potty's Spiced Rum"
+          ]
+        },
+        "abv": {
+          "visible": 20,
+          "extracted": "20% alc. by vol.",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "20% alc. by vol.",
+          "source": "full_image",
+          "confidence": 0.924973965,
+          "evidence": [
+            "20% alc. by vol."
+          ]
+        },
+        "net_contents": {
+          "visible": "1 L",
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_name": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_address": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "country_origin": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_applicable",
+          "before_status": "not_applicable",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        }
+      },
+      "refinements": [
+        {
+          "field": "brand_name",
+          "trigger": "Full-image brand_name has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "e,"
+          ],
+          "refined_text": "(A",
+          "selected": false,
+          "page_segmentation_mode": 6,
+          "mean_confidence": 0.84742119,
+          "duration_ms": 46.68453999329358,
+          "crop": {
+            "left": 181,
+            "top": 728,
+            "width": 334,
+            "height": 490,
+            "coordinate_space": "preprocessed_image"
+          }
+        },
+        {
+          "field": "class_type",
+          "trigger": "Full-image class_type has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "Pty s Spiced Rum",
+            "Rum with Natural Flavors"
+          ],
+          "refined_text": "Potty's Spiced Rum",
+          "selected": true,
+          "page_segmentation_mode": 7,
+          "mean_confidence": 0.6997343933333333,
+          "duration_ms": 49.98248700576369,
+          "crop": {
+            "left": 72,
+            "top": 49,
+            "width": 1468,
+            "height": 442,
+            "coordinate_space": "preprocessed_image"
+          }
+        }
+      ],
+      "warning": {
+        "presence": "not_found",
+        "wording": "not_found",
+        "heading_capitalization": "not_found",
+        "heading_boldness": "not_found",
+        "body_not_bold": "not_found",
+        "continuous_statement": "not_found",
+        "separation": "not_found",
+        "legibility_contrast": "not_found",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "warning_details": {
+        "status": "not_found",
+        "explanation": "Required warning wording could not be checked because no warning was located.",
+        "evidence": [],
+        "measurements": {}
+      }
+    },
+    {
+      "name": "our_distillery_back",
+      "crop": [
+        4,
+        8,
+        347,
+        209
+      ],
+      "visible": {
+        "brand_name": null,
+        "class_type": null,
+        "abv": null,
+        "net_contents": null,
+        "producer_name": "Our Distillery",
+        "producer_address": "Ft. Mill, SC",
+        "country_origin": null
+      },
+      "notes": "Back panel only. Produced and Bottled by cue and complete Government Warning. Heading followed by (1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.",
+      "ocr_text": "Produced and Bottled by:\nOur Distillery\nFt. Mill, SC\nGOVERNMENT WARNING: (3) ACCORDING TO THE SURGEON GENERAL WOMEN SHOULD\nNOT ORINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH\nDEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVEA\nCAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.\n|\nil\n334'0014",
+      "ocr_calls": 2,
+      "ocr_ms": 232.58666299807373,
+      "total_ms": 384.9807829974452,
+      "initial_candidates": {
+        "brand_name": [
+          {
+            "raw_value": "il",
+            "normalized_value": "il",
+            "source_line": "il",
+            "line_number": 8
+          }
+        ],
+        "class_type": [],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [
+          {
+            "raw_value": "Our Distillery",
+            "normalized_value": "our distillery",
+            "source_line": "Produced and Bottled by:\nOur Distillery",
+            "line_number": 2
+          }
+        ],
+        "producer_address": [
+          {
+            "raw_value": "Ft. Mill, SC",
+            "normalized_value": "ft mill sc",
+            "source_line": "Ft. Mill, SC",
+            "line_number": 3
+          }
+        ],
+        "country_origin": []
+      },
+      "candidates": {
+        "brand_name": [
+          {
+            "raw_value": "il",
+            "normalized_value": "il",
+            "source_line": "il",
+            "line_number": 8
+          }
+        ],
+        "class_type": [],
+        "abv": [],
+        "net_contents": [],
+        "producer_name": [
+          {
+            "raw_value": "Our Distillery",
+            "normalized_value": "our distillery",
+            "source_line": "Produced and Bottled by:\nOur Distillery",
+            "line_number": 2
+          }
+        ],
+        "producer_address": [
+          {
+            "raw_value": "Ft. Mill, SC",
+            "normalized_value": "ft mill sc",
+            "source_line": "Ft. Mill, SC",
+            "line_number": 3
+          }
+        ],
+        "country_origin": []
+      },
+      "source": "https://www.ttb.gov/system/files/images/labels/Slide47.jpg",
+      "fields": {
+        "brand_name": {
+          "visible": null,
+          "extracted": "il",
+          "status": "mismatch",
+          "before_status": "mismatch",
+          "pass1_extracted": "il",
+          "source": "full_image",
+          "confidence": 0.51614132,
+          "evidence": [
+            "il"
+          ]
+        },
+        "class_type": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "abv": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "net_contents": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_found",
+          "before_status": "not_found",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        },
+        "producer_name": {
+          "visible": "Our Distillery",
+          "extracted": "Our Distillery",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "Our Distillery",
+          "source": "full_image",
+          "confidence": 0.96794712,
+          "evidence": [
+            "Produced and Bottled by:\nOur Distillery"
+          ]
+        },
+        "producer_address": {
+          "visible": "Ft. Mill, SC",
+          "extracted": "Ft. Mill, SC",
+          "status": "match",
+          "before_status": "match",
+          "pass1_extracted": "Ft. Mill, SC",
+          "source": "full_image",
+          "confidence": 0.9595209499999999,
+          "evidence": [
+            "Ft. Mill, SC"
+          ]
+        },
+        "country_origin": {
+          "visible": null,
+          "extracted": null,
+          "status": "not_applicable",
+          "before_status": "not_applicable",
+          "pass1_extracted": null,
+          "source": "full_image",
+          "confidence": null,
+          "evidence": []
+        }
+      },
+      "refinements": [
+        {
+          "field": "brand_name",
+          "trigger": "Full-image brand_name has uncertain text or weak token confidence.",
+          "full_image_candidates": [
+            "il"
+          ],
+          "refined_text": "",
+          "selected": false,
+          "page_segmentation_mode": 6,
+          "mean_confidence": null,
+          "duration_ms": 42.959893005900085,
+          "crop": {
+            "left": 130,
+            "top": 422,
+            "width": 265,
+            "height": 335,
+            "coordinate_space": "preprocessed_image"
+          }
+        }
+      ],
+      "warning": {
+        "presence": "match",
+        "wording": "mismatch",
+        "heading_capitalization": "match",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "continuous_statement": "review",
+        "separation": "match",
+        "legibility_contrast": "review",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "warning_details": {
+        "status": "mismatch",
+        "explanation": "The extracted warning has missing, changed, reordered, or materially punctuated text.",
+        "evidence": [
+          "GOVERNMENT WARNING: (3) ACCORDING TO THE SURGEON GENERAL WOMEN SHOULD NOT ORINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVEA CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS."
+        ],
+        "measurements": {
+          "text_similarity": 0.989,
+          "token_similarity": 0.918
+        }
+      }
+    }
+  ],
+  "original": [
+    {
+      "name": "12345",
+      "results": {
+        "brand_name": {
+          "field": "brand_name",
+          "expected_raw": "12345 IMPORTS",
+          "extracted_raw": "12345 IMPORTS",
+          "expected_normalized": "12345 imports",
+          "extracted_normalized": "12345 imports",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "Regional OCR: 12345\nRetained full-image OCR: IMPORTS"
+          ],
+          "similarity_score": null
+        },
+        "class_type": {
+          "field": "class_type",
+          "expected_raw": "RUM WITH COCONUT LIQUEUR",
+          "extracted_raw": "RUM WITH COCONUT LIQUEUR",
+          "expected_normalized": "rum with coconut liqueur",
+          "extracted_normalized": "rum with coconut liqueur",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "RUM WITH\nCOCONUT LIQUEUR"
+          ],
+          "similarity_score": null
+        },
+        "abv": {
+          "field": "abv",
+          "expected_raw": "18%",
+          "extracted_raw": "18% ALC/VOL.",
+          "expected_normalized": 18,
+          "extracted_normalized": 18,
+          "status": "match",
+          "explanation": "Label shows 18% ABV; application specifies 18%.",
+          "evidence": [
+            "18% ALC/VOL."
+          ],
+          "similarity_score": null
+        },
+        "net_contents": {
+          "field": "net_contents",
+          "expected_raw": "200 ML",
+          "extracted_raw": "200 ML",
+          "expected_normalized": 200,
+          "extracted_normalized": 200,
+          "status": "match",
+          "explanation": "Label volume equals the application value after conversion to 200 mL.",
+          "evidence": [
+            "200 ML"
+          ],
+          "similarity_score": null
+        },
+        "producer_name": {
+          "field": "producer_name",
+          "expected_raw": "12345 IMPORTS",
+          "extracted_raw": "12345 IMPORTS",
+          "expected_normalized": "12345 imports",
+          "extracted_normalized": "12345 imports",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "IMPORTED BY: 12345 IMPORTS"
+          ],
+          "similarity_score": null
+        },
+        "producer_address": {
+          "field": "producer_address",
+          "expected_raw": "MIAMI, FL",
+          "extracted_raw": "MIAMI, FL",
+          "expected_normalized": "miami fl",
+          "extracted_normalized": "miami fl",
+          "status": "match",
+          "explanation": "Address matches after capitalization, punctuation, and state-name normalization.",
+          "evidence": [
+            "MIAMI, FL"
+          ],
+          "similarity_score": null
+        },
+        "country_origin": {
+          "field": "country_origin",
+          "expected_raw": "CANADA",
+          "extracted_raw": "CANADA",
+          "expected_normalized": "canada",
+          "extracted_normalized": "canada",
+          "status": "match",
+          "explanation": "Label identifies CANADA; application specifies CANADA.",
+          "evidence": [
+            "PRODUCED IN CANADA"
+          ],
+          "similarity_score": null
+        }
+      },
+      "warning": {
+        "presence": "match",
+        "wording": "review",
+        "heading_capitalization": "match",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "continuous_statement": "review",
+        "separation": "review",
+        "legibility_contrast": "review",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "calls": 2,
+      "timing": {
+        "preprocessing": 400.923,
+        "full_image_ocr": 428.133,
+        "refinement": 72.769,
+        "ocr": 500.902,
+        "analysis": 304.935,
+        "total": 1136.459
+      }
+    },
+    {
+      "name": "ABC",
+      "results": {
+        "brand_name": {
+          "field": "brand_name",
+          "expected_raw": "ABC",
+          "extracted_raw": "ABC",
+          "expected_normalized": "abc",
+          "extracted_normalized": "abc",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "ABC"
+          ],
+          "similarity_score": null
+        },
+        "class_type": {
+          "field": "class_type",
+          "expected_raw": "STRAIGHT RYE WHISKY",
+          "extracted_raw": "STRAIGHT RYE WHISKY",
+          "expected_normalized": "straight rye whisky",
+          "extracted_normalized": "straight rye whisky",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "WHISKY",
+            "STRAIGHT RYE WHISKY"
+          ],
+          "similarity_score": null
+        },
+        "abv": {
+          "field": "abv",
+          "expected_raw": "45%",
+          "extracted_raw": "45% ALC/VOL",
+          "expected_normalized": 45,
+          "extracted_normalized": 45,
+          "status": "match",
+          "explanation": "Label shows 45% ABV; application specifies 45%.",
+          "evidence": [
+            "45% ALC/VOL"
+          ],
+          "similarity_score": null
+        },
+        "net_contents": {
+          "field": "net_contents",
+          "expected_raw": "750 ML",
+          "extracted_raw": "750 ML",
+          "expected_normalized": 750,
+          "extracted_normalized": 750,
+          "status": "match",
+          "explanation": "Label volume equals the application value after conversion to 750 mL.",
+          "evidence": [
+            "750 ML"
+          ],
+          "similarity_score": null
+        },
+        "producer_name": {
+          "field": "producer_name",
+          "expected_raw": "ABC DISTILLERY",
+          "extracted_raw": "ABC DISTILLERY",
+          "expected_normalized": "abc distillery",
+          "extracted_normalized": "abc distillery",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "DISTILLED AND BOTTLED BY:\nABC DISTILLERY"
+          ],
+          "similarity_score": null
+        },
+        "producer_address": {
+          "field": "producer_address",
+          "expected_raw": "FREDERICK, MD",
+          "extracted_raw": "FREDERICK,MD",
+          "expected_normalized": "frederick md",
+          "extracted_normalized": "frederick md",
+          "status": "match",
+          "explanation": "Address matches after capitalization, punctuation, and state-name normalization.",
+          "evidence": [
+            "FREDERICK,MD"
+          ],
+          "similarity_score": null
+        },
+        "country_origin": {
+          "field": "country_origin",
+          "expected_raw": "Not applicable",
+          "extracted_raw": null,
+          "expected_normalized": null,
+          "extracted_normalized": null,
+          "status": "not_applicable",
+          "explanation": "Country of origin is not checked because the application identifies a domestic product.",
+          "evidence": [],
+          "similarity_score": null
+        }
+      },
+      "warning": {
+        "presence": "match",
+        "wording": "match",
+        "heading_capitalization": "match",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "continuous_statement": "review",
+        "separation": "review",
+        "legibility_contrast": "review",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "calls": 2,
+      "timing": {
+        "preprocessing": 421.613,
+        "full_image_ocr": 376.885,
+        "refinement": 45.599,
+        "ocr": 422.484,
+        "analysis": 243.635,
+        "total": 1042.286
+      }
+    },
+    {
+      "name": "FBN",
+      "results": {
+        "brand_name": {
+          "field": "brand_name",
+          "expected_raw": "FAKE BREWERY NAME",
+          "extracted_raw": "Fake Brewery Name",
+          "expected_normalized": "fake brewery name",
+          "extracted_normalized": "fake brewery name",
+          "status": "match",
+          "explanation": "Matches after capitalization, whitespace, and punctuation normalization.",
+          "evidence": [
+            "Fake Brewery Name"
+          ],
+          "similarity_score": null
+        },
+        "class_type": {
+          "field": "class_type",
+          "expected_raw": "INDIA PALE ALE",
+          "extracted_raw": "India Pale Ale",
+          "expected_normalized": "india pale ale",
+          "extracted_normalized": "india pale ale",
+          "status": "match",
+          "explanation": "Matches after capitalization, whitespace, and punctuation normalization.",
+          "evidence": [
+            "India Pale Ale"
+          ],
+          "similarity_score": null
+        },
+        "abv": {
+          "field": "abv",
+          "expected_raw": "5%",
+          "extracted_raw": "5% ALC./VOL",
+          "expected_normalized": 5,
+          "extracted_normalized": 5,
+          "status": "match",
+          "explanation": "Label shows 5% ABV; application specifies 5%.",
+          "evidence": [
+            "@ 5% ALC./VOL"
+          ],
+          "similarity_score": null
+        },
+        "net_contents": {
+          "field": "net_contents",
+          "expected_raw": "1 PINT",
+          "extracted_raw": "1 PINT",
+          "expected_normalized": 473.176473,
+          "extracted_normalized": 473.176473,
+          "status": "match",
+          "explanation": "Label volume equals the application value after conversion to 473.176 mL.",
+          "evidence": [
+            "1 PINT"
+          ],
+          "similarity_score": null
+        },
+        "producer_name": {
+          "field": "producer_name",
+          "expected_raw": "FAKE BREWERY NAME",
+          "extracted_raw": null,
+          "expected_normalized": "fake brewery name",
+          "extracted_normalized": null,
+          "status": "not_found",
+          "explanation": "No reliable producer / bottler name candidate was found in the extracted label text.",
+          "evidence": [],
+          "similarity_score": null
+        },
+        "producer_address": {
+          "field": "producer_address",
+          "expected_raw": "ARLINGTON, VIRGINIA",
+          "extracted_raw": null,
+          "expected_normalized": "arlington va",
+          "extracted_normalized": null,
+          "status": "not_found",
+          "explanation": "No reliable producer / bottler address was found in the label text.",
+          "evidence": [],
+          "similarity_score": null
+        },
+        "country_origin": {
+          "field": "country_origin",
+          "expected_raw": "Not applicable",
+          "extracted_raw": null,
+          "expected_normalized": null,
+          "extracted_normalized": null,
+          "status": "not_applicable",
+          "explanation": "Country of origin is not checked because the application identifies a domestic product.",
+          "evidence": [],
+          "similarity_score": null
+        }
+      },
+      "warning": {
+        "presence": "match",
+        "wording": "review",
+        "heading_capitalization": "match",
+        "heading_boldness": "match",
+        "body_not_bold": "match",
+        "continuous_statement": "review",
+        "separation": "review",
+        "legibility_contrast": "review",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "calls": 1,
+      "timing": {
+        "preprocessing": 254.689,
+        "full_image_ocr": 433.265,
+        "refinement": 0,
+        "ocr": 433.265,
+        "analysis": 135.44,
+        "total": 823.554
+      }
+    },
+    {
+      "name": "MHB",
+      "results": {
+        "brand_name": {
+          "field": "brand_name",
+          "expected_raw": "MALT & HOP BREWERY",
+          "extracted_raw": "Malt & Hop Brewery",
+          "expected_normalized": "malt & hop brewery",
+          "extracted_normalized": "malt & hop brewery",
+          "status": "match",
+          "explanation": "Matches after capitalization, whitespace, and punctuation normalization.",
+          "evidence": [
+            "Malt & Hop Brewery"
+          ],
+          "similarity_score": null
+        },
+        "class_type": {
+          "field": "class_type",
+          "expected_raw": "INDIA PALE ALE",
+          "extracted_raw": "India Pale Ale",
+          "expected_normalized": "india pale ale",
+          "extracted_normalized": "india pale ale",
+          "status": "match",
+          "explanation": "Matches after capitalization, whitespace, and punctuation normalization.",
+          "evidence": [
+            "India Pale Ale o®"
+          ],
+          "similarity_score": null
+        },
+        "abv": {
+          "field": "abv",
+          "expected_raw": "4%",
+          "extracted_raw": "4% ALCOHOL BY VOLUME",
+          "expected_normalized": 4,
+          "extracted_normalized": 4,
+          "status": "match",
+          "explanation": "Label shows 4% ABV; application specifies 4%.",
+          "evidence": [
+            "4% ALCOHOL BY VOLUME"
+          ],
+          "similarity_score": null
+        },
+        "net_contents": {
+          "field": "net_contents",
+          "expected_raw": "500 ML",
+          "extracted_raw": "1 PINT 0.9 FL OZ (500 ML)",
+          "expected_normalized": 500,
+          "extracted_normalized": 500,
+          "status": "match",
+          "explanation": "Label volume equals the application value after conversion to 500 mL.",
+          "evidence": [
+            "F ey 1 PINT 0.9 FL OZ (500 ML)"
+          ],
+          "similarity_score": null
+        },
+        "producer_name": {
+          "field": "producer_name",
+          "expected_raw": "MALT & HOP BREWERY",
+          "extracted_raw": null,
+          "expected_normalized": "malt & hop brewery",
+          "extracted_normalized": null,
+          "status": "not_found",
+          "explanation": "No reliable producer / bottler name candidate was found in the extracted label text.",
+          "evidence": [],
+          "similarity_score": null
+        },
+        "producer_address": {
+          "field": "producer_address",
+          "expected_raw": "HYATTSVILLE, MD",
+          "extracted_raw": null,
+          "expected_normalized": "hyattsville md",
+          "extracted_normalized": null,
+          "status": "not_found",
+          "explanation": "No reliable producer / bottler address was found in the label text.",
+          "evidence": [],
+          "similarity_score": null
+        },
+        "country_origin": {
+          "field": "country_origin",
+          "expected_raw": "Not applicable",
+          "extracted_raw": null,
+          "expected_normalized": null,
+          "extracted_normalized": null,
+          "status": "not_applicable",
+          "explanation": "Country of origin is not checked because the application identifies a domestic product.",
+          "evidence": [],
+          "similarity_score": null
+        }
+      },
+      "warning": {
+        "presence": "match",
+        "wording": "match",
+        "heading_capitalization": "match",
+        "heading_boldness": "match",
+        "body_not_bold": "match",
+        "continuous_statement": "review",
+        "separation": "review",
+        "legibility_contrast": "match",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "calls": 4,
+      "timing": {
+        "preprocessing": 298.474,
+        "full_image_ocr": 506.163,
+        "refinement": 162.234,
+        "ocr": 668.397,
+        "analysis": 380.229,
+        "total": 1185.091
+      }
+    },
+    {
+      "name": "WINE",
+      "results": {
+        "brand_name": {
+          "field": "brand_name",
+          "expected_raw": "ABC WINERY",
+          "extracted_raw": "ABC WINERY",
+          "expected_normalized": "abc winery",
+          "extracted_normalized": "abc winery",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "ABC WINERY"
+          ],
+          "similarity_score": null
+        },
+        "class_type": {
+          "field": "class_type",
+          "expected_raw": "AMERICAN RED WINE",
+          "extracted_raw": "AMERICAN RED WINE",
+          "expected_normalized": "american red wine",
+          "extracted_normalized": "american red wine",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "AMERICAN RED WINE",
+            "This red wine is a blend of 50% MERLOT and\n50% CABERNET SAUVIGNON. Wve find it"
+          ],
+          "similarity_score": null
+        },
+        "abv": {
+          "field": "abv",
+          "expected_raw": "13%",
+          "extracted_raw": "ALC. 13% BY VOL.",
+          "expected_normalized": 13,
+          "extracted_normalized": 13,
+          "status": "match",
+          "explanation": "Label shows 13% ABV; application specifies 13%.",
+          "evidence": [
+            "ALC. 13% BY VOL."
+          ],
+          "similarity_score": null
+        },
+        "net_contents": {
+          "field": "net_contents",
+          "expected_raw": "750 ML",
+          "extracted_raw": "750 ML",
+          "expected_normalized": 750,
+          "extracted_normalized": 750,
+          "status": "match",
+          "explanation": "Label volume equals the application value after conversion to 750 mL.",
+          "evidence": [
+            "750 ML"
+          ],
+          "similarity_score": null
+        },
+        "producer_name": {
+          "field": "producer_name",
+          "expected_raw": "XYZ CELLARS",
+          "extracted_raw": "XYZ CELLARS",
+          "expected_normalized": "xyz cellars",
+          "extracted_normalized": "xyz cellars",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "BOTTLED BY XYZ CELLARS, CITY, STATE"
+          ],
+          "similarity_score": null
+        },
+        "producer_address": {
+          "field": "producer_address",
+          "expected_raw": "CITY, STATE",
+          "extracted_raw": "CITY, STATE",
+          "expected_normalized": "city state",
+          "extracted_normalized": "city state",
+          "status": "match",
+          "explanation": "Address matches after capitalization, punctuation, and state-name normalization.",
+          "evidence": [
+            "BOTTLED BY XYZ CELLARS, CITY, STATE"
+          ],
+          "similarity_score": null
+        },
+        "country_origin": {
+          "field": "country_origin",
+          "expected_raw": "Not applicable",
+          "extracted_raw": null,
+          "expected_normalized": null,
+          "extracted_normalized": null,
+          "status": "not_applicable",
+          "explanation": "Country of origin is not checked because the application identifies a domestic product.",
+          "evidence": [],
+          "similarity_score": null
+        }
+      },
+      "warning": {
+        "presence": "match",
+        "wording": "match",
+        "heading_capitalization": "match",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "continuous_statement": "review",
+        "separation": "match",
+        "legibility_contrast": "review",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "calls": 2,
+      "timing": {
+        "preprocessing": 170.438,
+        "full_image_ocr": 337.213,
+        "refinement": 52.452,
+        "ocr": 389.665,
+        "analysis": 194.241,
+        "total": 702.046
+      }
+    },
+    {
+      "name": "brand-label1",
+      "results": {
+        "brand_name": {
+          "field": "brand_name",
+          "expected_raw": "ABC WINERY",
+          "extracted_raw": "ABC WINERY",
+          "expected_normalized": "abc winery",
+          "extracted_normalized": "abc winery",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "ABC WINERY"
+          ],
+          "similarity_score": null
+        },
+        "class_type": {
+          "field": "class_type",
+          "expected_raw": "ROSE WINE",
+          "extracted_raw": "ROSE WINE",
+          "expected_normalized": "rose wine",
+          "extracted_normalized": "rose wine",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "Fanciful Name Rose",
+            "ROSE WINE"
+          ],
+          "similarity_score": null
+        },
+        "abv": {
+          "field": "abv",
+          "expected_raw": "12.5%",
+          "extracted_raw": "ALC. 12.5% BY VOL.",
+          "expected_normalized": 12.5,
+          "extracted_normalized": 12.5,
+          "status": "match",
+          "explanation": "Label shows 12.5% ABV; application specifies 12.5%.",
+          "evidence": [
+            "ALC. 12.5% BY VOL."
+          ],
+          "similarity_score": null
+        },
+        "net_contents": {
+          "field": "net_contents",
+          "expected_raw": "750 ML",
+          "extracted_raw": "750 ML",
+          "expected_normalized": 750,
+          "extracted_normalized": 750,
+          "status": "match",
+          "explanation": "Label volume equals the application value after conversion to 750 mL.",
+          "evidence": [
+            "750 ML"
+          ],
+          "similarity_score": null
+        },
+        "producer_name": {
+          "field": "producer_name",
+          "expected_raw": "ABC WINERY",
+          "extracted_raw": "ABC WINERY",
+          "expected_normalized": "abc winery",
+          "extracted_normalized": "abc winery",
+          "status": "match",
+          "explanation": "Matches exactly.",
+          "evidence": [
+            "BOTTLED BY ABC WINERY, CITY, STATE"
+          ],
+          "similarity_score": null
+        },
+        "producer_address": {
+          "field": "producer_address",
+          "expected_raw": "CITY, STATE",
+          "extracted_raw": "CITY, STATE",
+          "expected_normalized": "city state",
+          "extracted_normalized": "city state",
+          "status": "match",
+          "explanation": "Address matches after capitalization, punctuation, and state-name normalization.",
+          "evidence": [
+            "BOTTLED BY ABC WINERY, CITY, STATE"
+          ],
+          "similarity_score": null
+        },
+        "country_origin": {
+          "field": "country_origin",
+          "expected_raw": "Not applicable",
+          "extracted_raw": null,
+          "expected_normalized": null,
+          "extracted_normalized": null,
+          "status": "not_applicable",
+          "explanation": "Country of origin is not checked because the application identifies a domestic product.",
+          "evidence": [],
+          "similarity_score": null
+        }
+      },
+      "warning": {
+        "presence": "match",
+        "wording": "match",
+        "heading_capitalization": "match",
+        "heading_boldness": "review",
+        "body_not_bold": "review",
+        "continuous_statement": "review",
+        "separation": "match",
+        "legibility_contrast": "review",
+        "type_size": "review",
+        "characters_per_inch": "review"
+      },
+      "calls": 1,
+      "timing": {
+        "preprocessing": 147.999,
+        "full_image_ocr": 289.52,
+        "refinement": 0,
+        "ocr": 289.52,
+        "analysis": 109.21,
+        "total": 546.878
+      }
+    }
+  ],
+  "metrics": {
+    "original-six-final": {
+      "total_cases": 6,
+      "ocr_invocations": 12,
+      "ocr_calls_per_case": {
+        "median": 2,
+        "p90": 4,
+        "slowest": 4
+      },
+      "field_status_counts": {
+        "match": 33,
+        "review": 0,
+        "mismatch": 0,
+        "not_found": 4,
+        "not_applicable": 5
+      },
+      "warning_status_counts": {
+        "match": 23,
+        "review": 37,
+        "mismatch": 0,
+        "not_found": 0,
+        "not_applicable": 0
+      },
+      "false_confident_matches": 0,
+      "missed_expected_matches": 4,
+      "ocr_failures": 0,
+      "processing_failures": 0,
+      "latency_ms": {
+        "analysis_ms": {
+          "median": 218.938,
+          "p90": 380.229,
+          "slowest": 380.229
+        },
+        "full_image_ocr_ms": {
+          "median": 402.509,
+          "p90": 506.163,
+          "slowest": 506.163
+        },
+        "ocr_ms": {
+          "median": 427.875,
+          "p90": 668.397,
+          "slowest": 668.397
+        },
+        "preprocessing_ms": {
+          "median": 276.581,
+          "p90": 421.613,
+          "slowest": 421.613
+        },
+        "refinement_ms": {
+          "median": 49.026,
+          "p90": 162.234,
+          "slowest": 162.234
+        },
+        "total_ms": {
+          "median": 932.92,
+          "p90": 1185.091,
+          "slowest": 1185.091
+        }
+      }
+    },
+    "synthetic-final": {
+      "total_cases": 18,
+      "ocr_invocations": 18,
+      "ocr_calls_per_case": {
+        "median": 1,
+        "p90": 1,
+        "slowest": 1
+      },
+      "total_expectations": 306,
+      "exact_status_checks": 306,
+      "status_accuracy": 1,
+      "false_confident_matches": 0,
+      "false_mismatches": 0,
+      "missed_matches": 0,
+      "review_count": 58,
+      "not_found_count": 10,
+      "ocr_or_processing_failures": 0,
+      "empty_ocr_results": 0,
+      "latency_ms": {
+        "analysis_ms": {
+          "median": 99.463,
+          "p90": 103.75,
+          "slowest": 106.481
+        },
+        "full_image_ocr_ms": {
+          "median": 229.766,
+          "p90": 250.823,
+          "slowest": 257.617
+        },
+        "ocr_ms": {
+          "median": 229.766,
+          "p90": 250.823,
+          "slowest": 257.617
+        },
+        "preprocessing_ms": {
+          "median": 122.942,
+          "p90": 129.279,
+          "slowest": 165.992
+        },
+        "refinement_ms": {
+          "median": 0,
+          "p90": 0,
+          "slowest": 0
+        },
+        "total_ms": {
+          "median": 509.237,
+          "p90": 531.517,
+          "slowest": 788.859
+        }
+      }
+    },
+    "stable": {
+      "visible_statuses": {
+        "review": 6,
+        "match": 13,
+        "not_found": 10,
+        "mismatch": 4
+      },
+      "median_ms": 408.81784800149035,
+      "slowest_ms": 470.2386260032654,
+      "calls": {
+        "1": 2,
+        "2": 7
+      }
+    },
+    "pass1": {
+      "visible_statuses": {
+        "review": 6,
+        "match": 13,
+        "not_found": 10,
+        "mismatch": 4
+      },
+      "median_ms": 414.6745420002844,
+      "slowest_ms": 496.8051169998944,
+      "calls": {
+        "2": 6,
+        "3": 3
+      }
+    },
+    "corrected": {
+      "visible_statuses": {
+        "review": 6,
+        "match": 13,
+        "not_found": 11,
+        "mismatch": 3
+      },
+      "median_ms": 411.30503700696863,
+      "slowest_ms": 498.92208399251103,
+      "calls": {
+        "2": 6,
+        "3": 3
+      }
+    }
+  }
+}

@@ -682,6 +682,13 @@ h2 {
 .warning-check.status-mismatch {
   border-left-color: #a43f24;
 }
+.warning-check.manual-physical {
+  border-left-color: #66778b;
+  background: #f4f6f8;
+}
+.manual-physical .status-label {
+  color: #455468;
+}
 .warning-check-heading h5 {
   font-size: 0.95rem;
 }

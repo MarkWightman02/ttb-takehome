@@ -400,6 +400,9 @@ describe('label verification workflow', () => {
     expect(
       within(warning).queryByText(/Automated warning checks passed/),
     ).toBeNull();
+    expect(
+      within(warning).getByText('Manual physical confirmation required.'),
+    ).toBeVisible();
     expect(within(warning).getByText('Warning found')).toBeVisible();
     expect(within(warning).getByText('Required wording')).toBeVisible();
     expect(within(warning).getByText('Heading boldness')).toBeVisible();
@@ -453,6 +456,8 @@ describe('label verification workflow', () => {
           ...successfulPayload,
           government_warning: {
             ...successfulPayload.government_warning,
+            automated_status: 'match',
+            manual_confirmation_required: true,
             checks,
           },
         }),
@@ -466,6 +471,22 @@ describe('label verification workflow', () => {
         'Automated warning checks passed; physical dimensions require manual confirmation.',
       ),
     ).toBeVisible();
+    const region = screen.getByRole('region', {
+      name: 'Government Health Warning',
+    });
+    expect(within(region).getByText('Automated checks matched')).toBeVisible();
+    // The clean-automated-pass case shows only the specific sentence, not
+    // also the generic "Manual physical confirmation required." paragraph.
+    expect(
+      within(region).queryByText('Manual physical confirmation required.'),
+    ).toBeNull();
+    expect(within(region).queryByText('Review')).toBeNull();
+    const manualLabels = within(region).getAllByText('Manual confirmation');
+    expect(manualLabels).toHaveLength(2);
+    for (const label of manualLabels) {
+      expect(label.closest('article')).toHaveClass('manual-physical');
+      expect(label.closest('article')).not.toHaveClass('status-review');
+    }
   });
 
   it('shows warning wording and capitalization mismatches as text', async () => {

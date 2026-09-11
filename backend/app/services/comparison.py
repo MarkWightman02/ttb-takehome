@@ -64,20 +64,15 @@ def overall_summary(
         if statuses & {"review", "not_found"}:
             return "One or more fields require manual review."
         return "All checked application fields match the label."
-    if "mismatch" in statuses or warning.overall_status == "mismatch":
+    if "mismatch" in statuses or warning.automated_status == "mismatch":
         return "One or more detected fields differ from the application or prescribed warning."
-    if statuses & {"review", "not_found"}:
+    if statuses & {"review", "not_found"} or warning.automated_status in {"review", "not_found"}:
         return "One or more label checks require manual review."
-    if warning.overall_status in {"review", "not_found"}:
-        if all(
-            getattr(warning.checks, name).status == "match"
-            for name in ("presence", "wording", "heading_capitalization")
-        ):
-            return (
-                "All automated text checks matched; some visual requirements still require "
-                "reviewer confirmation."
-            )
-        return "One or more label checks require manual review."
+    if warning.manual_confirmation_required:
+        return (
+            "All automated checks matched; physical Government Warning measurements "
+            "require manual confirmation."
+        )
     return "All checked application fields match the label."
 
 

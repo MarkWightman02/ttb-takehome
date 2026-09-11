@@ -1,4 +1,8 @@
 import Papa from 'papaparse';
+import {
+  automatedWarningStatus,
+  manualPhysicalConfirmationRequired,
+} from './verification';
 import type {
   ApplicationValues,
   FieldName,
@@ -284,7 +288,7 @@ export function deriveBatchItemStatus(
 ): BatchItemStatus {
   const statuses: VerificationStatus[] = [
     ...FIELD_NAMES.map((field) => result.results[field].status),
-    result.government_warning.overall_status,
+    automatedWarningStatus(result.government_warning),
   ];
   if (statuses.includes('mismatch')) return 'mismatch';
   if (
@@ -304,12 +308,17 @@ export function batchIssueSummary(result: VerificationResponse): string {
   }).map(
     (field) => `${field.replaceAll('_', ' ')}: ${result.results[field].status}`,
   );
-  if (result.government_warning.overall_status !== 'match') {
+  if (automatedWarningStatus(result.government_warning) !== 'match') {
     issues.push(
-      `government warning: ${result.government_warning.overall_status}`,
+      `government warning: ${automatedWarningStatus(result.government_warning)}`,
     );
   }
-  return issues.length ? issues.join('; ') : 'All applicable checks matched.';
+  const summary = issues.length
+    ? issues.join('; ')
+    : 'All automated checks matched.';
+  return manualPhysicalConfirmationRequired(result.government_warning)
+    ? `${summary} Manual physical confirmation required.`
+    : summary;
 }
 
 export async function runBoundedQueue<Item, Result>(
@@ -372,6 +381,12 @@ export function batchResultsCsv(items: MappedBatchItem[]): string {
     country_origin_status: item.result?.results.country_origin.status ?? '',
     government_warning_status:
       item.result?.government_warning.overall_status ?? '',
+    automated_warning_status: item.result
+      ? automatedWarningStatus(item.result.government_warning)
+      : '',
+    manual_physical_confirmation_required: item.result
+      ? manualPhysicalConfirmationRequired(item.result.government_warning)
+      : '',
     duration_ms: item.result
       ? Math.round(item.result.total_verification_duration_ms)
       : '',

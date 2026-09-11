@@ -3,6 +3,7 @@ import {
   BATCH_CSV_HEADERS,
   MAX_BATCH_SIZE,
   batchResultsCsv,
+  batchIssueSummary,
   deriveBatchItemStatus,
   mapBatchFiles,
   normalizeFilename,
@@ -181,12 +182,50 @@ describe('bounded batch execution and results', () => {
       result: response({}),
       processingError: null,
     } satisfies MappedBatchItem;
+    item.result.government_warning.overall_status = 'review';
+    item.result.government_warning.automated_status = 'match';
+    item.result.government_warning.manual_confirmation_required = true;
 
     const csv = batchResultsCsv([item]);
     expect(csv).toContain('government_warning_status');
+    expect(csv).toContain(
+      'automated_warning_status,manual_physical_confirmation_required',
+    );
+    expect(csv).toContain(',review,match,true,1234,');
     expect(csv).toContain("'=DANGEROUS(), LLC");
     expect(csv).toContain('label.jpg');
     expect(csv).toContain('1234');
+  });
+
+  it('separates physical-only confirmation from real automated uncertainty', () => {
+    const result = response({ government_warning: 'review' });
+    result.government_warning.automated_status = 'match';
+    result.government_warning.manual_confirmation_required = true;
+    expect(deriveBatchItemStatus(result)).toBe('match');
+    expect(batchIssueSummary(result)).toBe(
+      'All automated checks matched. Manual physical confirmation required.',
+    );
+    result.government_warning.automated_status = 'review';
+    expect(deriveBatchItemStatus(result)).toBe('review');
+    expect(batchIssueSummary(result)).toContain('government warning: review');
+    expect(batchIssueSummary(result)).toContain(
+      'Manual physical confirmation required.',
+    );
+    result.government_warning.automated_status = 'mismatch';
+    expect(deriveBatchItemStatus(result)).toBe('mismatch');
+  });
+
+  it('keeps legacy responses conservative when automated_status is absent', () => {
+    const result = response({ government_warning: 'review' });
+    expect(deriveBatchItemStatus(result)).toBe('review');
+    expect(batchIssueSummary(result)).toContain(
+      'Manual physical confirmation required.',
+    );
+    // The backend model is the single source of truth for a known physical
+    // defect (it escalates automated_status to 'mismatch' itself; see
+    // backend/tests/test_warning_statuses.py). The frontend just forwards it.
+    result.government_warning.automated_status = 'mismatch';
+    expect(deriveBatchItemStatus(result)).toBe('mismatch');
   });
 });
 

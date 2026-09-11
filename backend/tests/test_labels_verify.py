@@ -135,10 +135,11 @@ def test_all_fields_match_and_ocr_runs_exactly_once(settings: Settings):
         result["status"] for name, result in payload["results"].items() if name != "country_origin"
     } == {"match"}
     assert payload["results"]["country_origin"]["status"] == "not_applicable"
-    assert payload["overall_summary"] == (
-        "All automated text checks matched; some visual requirements still require "
-        "reviewer confirmation."
-    )
+    # This text-only provider supplies no visual evidence: this is genuine
+    # automated uncertainty, not merely the two physical requirements.
+    assert payload["overall_summary"] == "One or more label checks require manual review."
+    assert payload["government_warning"]["automated_status"] == "review"
+    assert payload["government_warning"]["manual_confirmation_required"] is True
     assert payload["raw_text"].startswith("OLD TOM")
     assert payload["engine"] == "test-ocr"
     assert payload["total_verification_duration_ms"] >= payload["ocr_duration_ms"]

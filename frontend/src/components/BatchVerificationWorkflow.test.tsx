@@ -34,7 +34,12 @@ describe('batch verification workflow', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     expect(await screen.findByText('Batch summary')).toBeVisible();
-    expect(screen.getAllByText('All checks matched').length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText('Automated checks matched').length,
+    ).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(/Manual physical confirmation required/).length,
+    ).toBeGreaterThan(0);
     const submitted = fetchMock.mock.calls[0]?.[1]?.body as FormData;
     expect(submitted.get('brand_name')).toBe('First Brand');
     expect(submitted.get('file')).toBeInstanceOf(File);
@@ -186,7 +191,9 @@ function successfulPayload() {
     candidates: {},
     results,
     government_warning: {
-      overall_status: 'match',
+      overall_status: 'review',
+      automated_status: 'match',
+      manual_confirmation_required: true,
       localized_text: null,
       source_lines: [],
       bounding_box: null,
@@ -201,8 +208,8 @@ function successfulPayload() {
         continuous_statement: check,
         separation: check,
         legibility_contrast: check,
-        type_size: check,
-        characters_per_inch: check,
+        type_size: { ...check, status: 'review' },
+        characters_per_inch: { ...check, status: 'review' },
       },
     },
     overall_summary: 'All checked application fields match the label.',
