@@ -121,7 +121,7 @@ export function parseBatchCsv(csv: string): BatchParseResult {
   }
   if (parsed.data.length > MAX_BATCH_SIZE) {
     errors.push(
-      `The manifest contains ${parsed.data.length} records; the maximum batch size is ${MAX_BATCH_SIZE}.`,
+      `The CSV contains ${parsed.data.length} rows; the maximum batch size is ${MAX_BATCH_SIZE}.`,
     );
     return { records: [], errors };
   }
@@ -129,7 +129,7 @@ export function parseBatchCsv(csv: string): BatchParseResult {
   const records = parsed.data.map((row, index) => parseRow(row, index + 2));
   for (const error of parsed.errors) {
     if (error.row === undefined) continue;
-    records[error.row]?.errors.push(`CSV parsing error: ${error.message}`);
+    records[error.row]?.errors.push(`CSV row problem: ${error.message}`);
   }
   const byFilename = new Map<string, BatchManifestRecord[]>();
   for (const record of records) {
@@ -143,12 +143,12 @@ export function parseBatchCsv(csv: string): BatchParseResult {
     if (matches.length < 2) continue;
     for (const record of matches) {
       record.errors.push(
-        `Duplicate image filename after safe normalization: ${record.imageFilename}.`,
+        `More than one row uses the image filename ${record.imageFilename}.`,
       );
     }
   }
   if (!records.length && !errors.length)
-    errors.push('The CSV does not contain any records.');
+    errors.push('The CSV does not contain any rows.');
   return { records, errors };
 }
 
@@ -182,25 +182,27 @@ function parseRow(
     ['producer_address', application.producer_address],
   ];
   for (const [name, fieldValue] of required) {
-    if (!fieldValue) errors.push(`${name} is required.`);
+    if (!fieldValue) errors.push(`The ${name} column is required.`);
   }
   const abv = Number(application.abv);
   if (application.abv && (!Number.isFinite(abv) || abv <= 0 || abv > 100)) {
-    errors.push('abv must be greater than 0 and no more than 100.');
+    errors.push('The abv column must be greater than 0 and no more than 100.');
   }
   if (
     application.net_contents &&
     !VOLUME_PATTERN.test(application.net_contents)
   ) {
     errors.push(
-      'net_contents must use mL, L, US pint, or US fluid ounce units.',
+      'The net_contents column must use mL, L, US pint, or US fluid ounce units.',
     );
   }
   if (importedText !== 'true' && importedText !== 'false') {
-    errors.push('imported_product must be true or false.');
+    errors.push('The imported_product column must be true or false.');
   }
   if (importedProduct && !application.country_origin) {
-    errors.push('country_origin is required when imported_product is true.');
+    errors.push(
+      'The country_origin column is required when imported_product is true.',
+    );
   }
   return {
     id: `row-${rowNumber}`,
@@ -315,7 +317,7 @@ export function batchIssueSummary(result: VerificationResponse): string {
   }
   const summary = issues.length
     ? issues.join('; ')
-    : 'All automated checks matched.';
+    : 'All checks completed by this tool matched.';
   return manualPhysicalConfirmationRequired(result.government_warning)
     ? `${summary} Manual physical confirmation required.`
     : summary;

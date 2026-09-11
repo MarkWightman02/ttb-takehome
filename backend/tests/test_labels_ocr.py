@@ -195,7 +195,9 @@ def test_ocr_processing_failure_returns_typed_error(settings: Settings):
     assert response.json() == {
         "error": {
             "code": "ocr_processing_failed",
-            "message": "The image could not be processed by OCR. Try another image.",
+            "message": (
+                "The label image could not be read. Try a clearer image or a different file."
+            ),
         }
     }
     assert "private engine details" not in response.text

@@ -543,6 +543,30 @@ h2 {
   margin: 0.35rem 0 0;
   color: #455468;
 }
+.overall-summary strong {
+  font-size: 1.05rem;
+}
+.overall-summary.status-match {
+  border-left-color: #286340;
+  background: #e7f3ec;
+}
+.overall-summary.status-match strong {
+  color: #1f4d33;
+}
+.overall-summary.status-review {
+  border-left-color: #a56a00;
+  background: #fbf3e2;
+}
+.overall-summary.status-review strong {
+  color: #795000;
+}
+.overall-summary.status-mismatch {
+  border-left-color: #a43f24;
+  background: #f8eae5;
+}
+.overall-summary.status-mismatch strong {
+  color: #8b3d23;
+}
 .field-results {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -740,6 +764,12 @@ h2 {
   margin: 0 0 0.45rem;
   color: #243b53;
   font-size: 1rem;
+}
+.raw-text-label {
+  margin: 0 0 0.35rem;
+  color: #596779;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 .raw-text {
   min-height: 150px;

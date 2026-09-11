@@ -55,15 +55,15 @@ const STATUS_COUNT_LABELS: Record<VerificationStatus, string> = {
 };
 const WARNING_CHECK_LABELS: Record<WarningCheckName, string> = {
   presence: 'Warning found',
-  wording: 'Required wording',
-  heading_capitalization: '“GOVERNMENT WARNING” capitalization',
-  heading_boldness: 'Heading boldness',
-  body_not_bold: 'Body text not bold',
-  continuous_statement: 'Continuous statement',
-  separation: 'Separation / layout',
-  legibility_contrast: 'Legibility / contrasting background',
-  type_size: 'Type-size requirement',
-  characters_per_inch: 'Maximum characters per inch',
+  wording: 'Warning wording',
+  heading_capitalization: 'Heading capitalization',
+  heading_boldness: 'Heading emphasis',
+  body_not_bold: 'Warning text formatting',
+  continuous_statement: 'Warning continuity',
+  separation: 'Warning layout',
+  legibility_contrast: 'Readability',
+  type_size: 'Type size',
+  characters_per_inch: 'Characters per inch',
 };
 const WARNING_CHECK_GROUPS: {
   id: string;
@@ -73,15 +73,15 @@ const WARNING_CHECK_GROUPS: {
 }[] = [
   {
     id: 'warning-text-checks',
-    title: 'Deterministic text checks',
-    description: 'Direct checks against the wording recognized by OCR.',
+    title: 'Warning text',
+    description: "Checks the warning's required wording and heading.",
     checks: ['presence', 'wording', 'heading_capitalization'],
   },
   {
     id: 'warning-image-checks',
-    title: 'Image-based evidence',
+    title: 'Warning presentation',
     description:
-      'Conservative signals from OCR location, layout, weight, and contrast.',
+      'Checks how the warning is formatted and presented on the label.',
     checks: [
       'heading_boldness',
       'body_not_bold',
@@ -92,9 +92,9 @@ const WARNING_CHECK_GROUPS: {
   },
   {
     id: 'warning-physical-checks',
-    title: 'Manual physical confirmation',
+    title: 'Physical measurements',
     description:
-      'A digital image without trustworthy scale cannot establish physical measurements.',
+      'Some Government Warning requirements depend on the physical printed label and cannot be reliably measured from an image.',
     checks: ['type_size', 'characters_per_inch'],
   },
 ];
@@ -236,11 +236,11 @@ export function LabelOcrWorkflow() {
         <li>
           <section className="step-card" aria-labelledby="application-title">
             <StepHeading number="1" id="application-title">
-              Application data
+              Application information
             </StepHeading>
             <p>
-              Enter values from the application. Capitalization does not need to
-              match the label.
+              Enter the information provided on the alcohol label application.
+              Capitalization does not need to match the label.
             </p>
             <div className="application-fields">
               <TextField
@@ -341,11 +341,11 @@ export function LabelOcrWorkflow() {
         <li>
           <section className="step-card" aria-labelledby="upload-title">
             <StepHeading number="2" id="upload-title">
-              Submitted label artwork
+              Submitted label
             </StepHeading>
             <p>
-              Choose one PNG, JPEG, or WebP image. It is processed for this
-              request and not retained.
+              Upload the label artwork submitted with the application. Choose
+              one PNG, JPEG, or WebP image; it is not saved after this check.
             </p>
             <div
               className="upload-area"
@@ -394,8 +394,7 @@ export function LabelOcrWorkflow() {
               Verify label
             </StepHeading>
             <p>
-              Run local OCR, then compare the application fields with extracted
-              label evidence.
+              Compare the label with the application information you entered.
             </p>
             {error && (
               <div
@@ -417,7 +416,7 @@ export function LabelOcrWorkflow() {
             </button>
             {state === 'loading' && (
               <p className="loading-status" role="status" aria-live="polite">
-                Running local OCR and comparing application fields.
+                Comparing the label with the application information…
               </p>
             )}
           </section>
@@ -429,7 +428,7 @@ export function LabelOcrWorkflow() {
               Review results
             </StepHeading>
             <p>
-              These informational results support manual review; they are not a
+              These results help with label review. They are not a final
               regulatory decision.
             </p>
             {result ? (
@@ -438,8 +437,8 @@ export function LabelOcrWorkflow() {
               <div className="placeholder results-placeholder">
                 <p>No verification has been performed.</p>
                 <p>
-                  Enter application data, choose an image, then select “Verify
-                  Label.”
+                  Enter the application information, choose an image, then
+                  select “Verify Label.”
                 </p>
               </div>
             )}
@@ -532,24 +531,37 @@ export function VerificationResults({
   );
   const hasFieldIssue =
     statusCounts.review + statusCounts.mismatch + statusCounts.not_found > 0;
+  const warningStatus = automatedWarningStatus(result.government_warning);
   const showPhysicalConfirmationNote =
     !hasFieldIssue &&
-    automatedWarningStatus(result.government_warning) === 'match' &&
+    warningStatus === 'match' &&
     manualPhysicalConfirmationRequired(result.government_warning);
+  const overallStatus: 'mismatch' | 'review' | 'match' =
+    statusCounts.mismatch > 0 || warningStatus === 'mismatch'
+      ? 'mismatch'
+      : hasFieldIssue ||
+          warningStatus === 'review' ||
+          warningStatus === 'not_found'
+        ? 'review'
+        : 'match';
 
   return (
     <div className="verification-result" tabIndex={-1} ref={resultRef}>
-      <div className="overall-summary" role="status" aria-live="polite">
+      <div
+        className={`overall-summary status-${overallStatus}`}
+        role="status"
+        aria-live="polite"
+      >
         <strong>{result.overall_summary}</strong>
-        {showPhysicalConfirmationNote && (
-          <p className="physical-confirmation-note">
-            Physical Government Warning measurements require manual
-            confirmation.
-          </p>
-        )}
         <p aria-label="Application field status counts">
           {formatStatusCounts(statusCounts)}
         </p>
+        {showPhysicalConfirmationNote && (
+          <p className="physical-confirmation-note">
+            Physical Government Warning measurements still need to be confirmed
+            manually.
+          </p>
+        )}
       </div>
       <div className="field-results" aria-label="Application field results">
         {(Object.keys(FIELD_LABELS) as FieldName[]).map((field) => {
@@ -567,15 +579,15 @@ export function VerificationResults({
               </div>
               <dl>
                 <div>
-                  <dt>Expected</dt>
+                  <dt>Application</dt>
                   <dd>{fieldResult.expected_raw}</dd>
                 </div>
                 <div>
-                  <dt>Detected</dt>
+                  <dt>Label</dt>
                   <dd>
                     {fieldResult.status === 'not_applicable'
                       ? 'Not applicable'
-                      : (fieldResult.extracted_raw ?? 'Not detected')}
+                      : (fieldResult.extracted_raw ?? 'Not found on label')}
                   </dd>
                 </div>
               </dl>
@@ -589,12 +601,15 @@ export function VerificationResults({
         idPrefix={idPrefix}
       />
       <details className="ocr-evidence">
-        <summary>Inspect raw OCR evidence</summary>
-        <div className="result-summary" aria-label="OCR processing details">
+        <summary>Technical details</summary>
+        <div
+          className="result-summary"
+          aria-label="Technical processing details"
+        >
           <span>
             Completed in {formatDuration(result.total_verification_duration_ms)}
           </span>
-          <span>OCR: {formatDuration(result.ocr_duration_ms)}</span>
+          <span>Reading time: {formatDuration(result.ocr_duration_ms)}</span>
           <span>Engine: {result.engine}</span>
           <span>
             Image: {result.image.width} × {result.image.height}{' '}
@@ -603,7 +618,7 @@ export function VerificationResults({
         </div>
         {result.warnings.length > 0 && (
           <div className="ocr-warning">
-            <strong>Evidence warnings</strong>
+            <strong>Additional notices</strong>
             <ul>
               {result.warnings.map((warning) => (
                 <li key={warning}>{warning}</li>
@@ -611,8 +626,9 @@ export function VerificationResults({
             </ul>
           </div>
         )}
+        <p className="raw-text-label">Text found on label:</p>
         <pre className="raw-text">
-          {result.raw_text || 'No text was detected in this image.'}
+          {result.raw_text || 'No text was found on this image.'}
         </pre>
       </details>
     </div>
@@ -653,9 +669,8 @@ function GovernmentWarningResults({
         </p>
       )}
       <p className="warning-limit-note">
-        Text checks compare OCR wording directly. Image evidence can flag likely
-        presentation issues. Physical type size and characters per inch require
-        a trustworthy scale.
+        The warning's wording, heading, formatting, and readability are checked
+        directly from the uploaded label.
       </p>
       {WARNING_CHECK_GROUPS.map((group) => {
         const groupId = `${idPrefix}${group.id}`;
@@ -696,16 +711,16 @@ function GovernmentWarningResults({
       })}
       {warning.localized_text && (
         <details className="localized-warning-evidence">
-          <summary>Inspect localized warning evidence</summary>
+          <summary>Warning technical details</summary>
           <p>
             Analysis completed in {formatDuration(warning.analysis_duration_ms)}
             {warning.mean_ocr_confidence !== null
-              ? ` · Mean OCR confidence ${Math.round(warning.mean_ocr_confidence * 100)}%`
-              : ' · OCR confidence unavailable'}
+              ? ` · Recognition confidence ${Math.round(warning.mean_ocr_confidence * 100)}%`
+              : ' · Recognition confidence unavailable'}
           </p>
           {warning.bounding_box && (
             <p>
-              OCR region: {warning.bounding_box.width} ×{' '}
+              Detected region: {warning.bounding_box.width} ×{' '}
               {warning.bounding_box.height} pixels in the preprocessed image
             </p>
           )}

@@ -61,7 +61,7 @@ describe('batch CSV parsing and mapping', () => {
     );
 
     expect(parsed.records[0]?.errors).toEqual([]);
-    expect(parsed.records[1]?.errors.join(' ')).toContain('CSV parsing error');
+    expect(parsed.records[1]?.errors.join(' ')).toContain('CSV row problem');
   });
 
   it('flags duplicate filenames after conservative path, case, and Unicode normalization', () => {
@@ -72,7 +72,7 @@ describe('batch CSV parsing and mapping', () => {
     expect(parsed.records).toHaveLength(2);
     expect(
       parsed.records.every((record) =>
-        record.errors.join(' ').includes('Duplicate'),
+        record.errors.join(' ').includes('More than one row'),
       ),
     ).toBe(true);
     expect(normalizeFilename(' C:\\labels\\Café.JPG ')).toBe('café.jpg');
@@ -203,7 +203,7 @@ describe('bounded batch execution and results', () => {
     result.government_warning.manual_confirmation_required = true;
     expect(deriveBatchItemStatus(result)).toBe('match');
     expect(batchIssueSummary(result)).toBe(
-      'All automated checks matched. Manual physical confirmation required.',
+      'All checks completed by this tool matched. Manual physical confirmation required.',
     );
     result.government_warning.automated_status = 'review';
     expect(deriveBatchItemStatus(result)).toBe('review');

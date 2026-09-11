@@ -51,11 +51,11 @@ const warningChecks = {
   ),
   type_size: warningCheck(
     'review',
-    'A minimum type size of 2 mm applies, but pixels do not establish physical size.',
+    'A minimum type size of 2 mm applies. This must be confirmed from the physical label.',
   ),
   characters_per_inch: warningCheck(
     'review',
-    'The applicable limit is 25 characters per inch; physical scale is unavailable.',
+    'A maximum of 25 characters per inch applies. This must be confirmed from the physical label.',
   ),
 };
 
@@ -233,7 +233,7 @@ describe('label verification workflow', () => {
       screen.getByRole('button', { name: 'Verifying label…' }),
     ).toBeDisabled();
     expect(screen.getByRole('status')).toHaveTextContent(
-      'Running local OCR and comparing application fields.',
+      'Comparing the label with the application information…',
     );
     await waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
     const [url, request] = fetchMock.mock.calls[0]!;
@@ -278,8 +278,8 @@ describe('label verification workflow', () => {
     ).toHaveTextContent('6 matched · 1 not applicable');
     expect(screen.getAllByText('Brand name')).toHaveLength(2);
     expect(screen.getByText('Alcohol content / ABV')).toBeVisible();
-    expect(screen.getByText('Inspect raw OCR evidence')).toBeVisible();
-    fireEvent.click(screen.getByText('Inspect raw OCR evidence'));
+    expect(screen.getByText('Technical details')).toBeVisible();
+    fireEvent.click(screen.getByText('Technical details'));
     expect(screen.getAllByText(/OLD TOM DISTILLERY/).length).toBeGreaterThan(0);
     expect(screen.getByText('Engine: tesseract-cli')).toBeVisible();
     expect(screen.getByText(successfulPayload.warnings[0]!)).toBeVisible();
@@ -323,7 +323,7 @@ describe('label verification workflow', () => {
     expect(within(fieldResults).getByText('Review')).toBeVisible();
     expect(within(fieldResults).getByText('Mismatch')).toBeVisible();
     expect(within(fieldResults).getByText('Not found')).toBeVisible();
-    expect(screen.getByText('Not detected')).toBeVisible();
+    expect(screen.getByText('Not found on label')).toBeVisible();
     expect(screen.getAllByText(/manual review/i).length).toBeGreaterThan(0);
   });
 
@@ -404,36 +404,32 @@ describe('label verification workflow', () => {
       within(warning).getByText('Manual physical confirmation required.'),
     ).toBeVisible();
     expect(within(warning).getByText('Warning found')).toBeVisible();
-    expect(within(warning).getByText('Required wording')).toBeVisible();
-    expect(within(warning).getByText('Heading boldness')).toBeVisible();
-    expect(
-      within(warning).getByText('Legibility / contrasting background'),
-    ).toBeVisible();
-    expect(within(warning).getByText('Type-size requirement')).toBeVisible();
-    expect(
-      within(warning).getByText('Maximum characters per inch'),
-    ).toBeVisible();
+    expect(within(warning).getByText('Warning wording')).toBeVisible();
+    expect(within(warning).getByText('Heading emphasis')).toBeVisible();
+    expect(within(warning).getByText('Readability')).toBeVisible();
+    expect(within(warning).getByText('Type size')).toBeVisible();
+    expect(within(warning).getByText('Characters per inch')).toBeVisible();
     expect(
       within(warning).getByRole('heading', {
-        name: 'Deterministic text checks',
+        name: 'Warning text',
       }),
     ).toBeVisible();
     expect(
-      within(warning).getByRole('heading', { name: 'Image-based evidence' }),
+      within(warning).getByRole('heading', { name: 'Warning presentation' }),
     ).toBeVisible();
     expect(
       within(warning).getByRole('heading', {
-        name: 'Manual physical confirmation',
+        name: 'Physical measurements',
       }),
     ).toBeVisible();
     expect(
-      within(warning).getAllByText(/trustworthy scale/i).length,
+      within(warning).getAllByText(/confirmed from the physical label/i).length,
     ).toBeGreaterThan(0);
-    fireEvent.click(
-      within(warning).getByText('Inspect localized warning evidence'),
-    );
+    fireEvent.click(within(warning).getByText('Warning technical details'));
     expect(within(warning).getByText(/GOVERNMENT WARNING:/)).toBeVisible();
-    expect(within(warning).getByText(/Mean OCR confidence 92%/)).toBeVisible();
+    expect(
+      within(warning).getByText(/Recognition confidence 92%/),
+    ).toBeVisible();
   });
 
   it('explains when only physical warning checks remain manual', async () => {
@@ -471,7 +467,7 @@ describe('label verification workflow', () => {
     // not a Review badge and not a combined "some visual requirements" line.
     expect(
       await screen.findByText(
-        'Physical Government Warning measurements require manual confirmation.',
+        'Physical Government Warning measurements still need to be confirmed manually.',
       ),
     ).toBeVisible();
     const region = screen.getByRole('region', {

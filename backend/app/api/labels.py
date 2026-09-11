@@ -213,13 +213,13 @@ async def _process_upload(request: Request, upload: UploadFile) -> ProcessedLabe
             raise ApiError(
                 503,
                 "ocr_unavailable",
-                "Local OCR is unavailable. Install Tesseract and try again.",
+                "The label reading service is unavailable right now. Try again in a moment.",
             ) from exc
         except OcrProcessingError as exc:
             raise ApiError(
                 500,
                 "ocr_processing_failed",
-                "The image could not be processed by OCR. Try another image.",
+                "The label image could not be read. Try a clearer image or a different file.",
             ) from exc
 
         duration_ms = (perf_counter() - started) * 1_000

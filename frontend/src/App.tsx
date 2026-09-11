@@ -24,12 +24,11 @@ export default function App() {
               ? 'Single-label review'
               : 'Optional batch review'}
           </p>
-          <h1>Verify label artwork against application data</h1>
+          <h1>Label Verification</h1>
           <p className="lede">
-            Enter the values from the COLA application, then upload the
-            submitted label artwork. The tool extracts label information and
-            highlights matches, discrepancies, and items requiring manual
-            review.
+            Compare submitted alcohol label artwork with the information on its
+            application. Enter the application information, upload the label,
+            and review any differences.
           </p>
         </div>
 

@@ -223,6 +223,10 @@ export function BatchVerificationWorkflow() {
 
   return (
     <div className="batch-workflow">
+      <p className="batch-intro">
+        Verify multiple submitted labels at once using a CSV file containing
+        application information.
+      </p>
       <ol className="batch-steps" aria-label="Batch verification workflow">
         <li>
           <section className="step-card" aria-labelledby="batch-manifest-title">
@@ -266,8 +270,8 @@ export function BatchVerificationWorkflow() {
               Select label images
             </BatchStepHeading>
             <p>
-              Choose up to {MAX_BATCH_SIZE} PNG, JPEG, or WebP images. Files
-              remain in your browser until their individual request runs.
+              Choose up to {MAX_BATCH_SIZE} PNG, JPEG, or WebP images. Images
+              stay in your browser until each one is checked.
             </p>
             <label className="file-label" htmlFor="batch-images">
               Choose label images
@@ -285,7 +289,7 @@ export function BatchVerificationWorkflow() {
               {phase === 'setup'
                 ? files.length
                 : items.filter((item) => item.file !== null).length}{' '}
-              image files retained for pending or failed items
+              image files ready to check or retry
             </p>
             <MessageList
               title="Image selection problems"
@@ -301,18 +305,21 @@ export function BatchVerificationWorkflow() {
         <li className="batch-wide-step">
           <section className="step-card" aria-labelledby="batch-mapping-title">
             <BatchStepHeading number="3" id="batch-mapping-title">
-              Review mapping and validation
+              Review matches
             </BatchStepHeading>
             <p>
-              Filename matching ignores case, Unicode composition, surrounding
-              whitespace, and CSV path prefixes. Ambiguous or missing matches
-              are never guessed.
+              The image filename in each CSV row must match an uploaded label
+              image filename. For example, a row with{' '}
+              <code>image_filename = label-001.png</code> is matched by
+              uploading <code>label-001.png</code>. Matching ignores
+              capitalization and extra spacing; a missing or unclear match is
+              never guessed.
             </p>
             {items.length ? (
               <BatchTable items={items} showDetails={false} />
             ) : (
               <div className="placeholder">
-                Upload a CSV and select images to review mapping.
+                Upload a CSV and select images to review matches.
               </div>
             )}
           </section>
@@ -324,9 +331,8 @@ export function BatchVerificationWorkflow() {
               Run batch verification
             </BatchStepHeading>
             <p>
-              Two labels are verified at a time through the same endpoint used
-              for single-label review. Invalid rows remain visible and do not
-              stop valid items.
+              Each label is checked the same way as single-label review, two at
+              a time. A problem with one row does not stop the others.
             </p>
             {items.length > 0 && (
               <div className="batch-progress" role="status" aria-live="polite">

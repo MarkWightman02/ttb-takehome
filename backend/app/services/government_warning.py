@@ -66,9 +66,8 @@ def analyze_government_warning(
     type_size = WarningCheck(
         status="review",
         explanation=(
-            f"A minimum type size of {requirement.minimum_type_size_mm} mm applies. Physical "
-            "type height cannot be established from this raster image and must be confirmed "
-            "manually."
+            f"A minimum type size of {requirement.minimum_type_size_mm} mm applies. This must "
+            "be confirmed from the physical label."
         ),
         evidence=["27 CFR 16.22(b)"],
         measurements={
@@ -80,9 +79,8 @@ def analyze_government_warning(
     characters_per_inch = WarningCheck(
         status="review",
         explanation=(
-            f"The applicable limit is {requirement.maximum_characters_per_inch} characters per "
-            "inch. Physical CPI cannot be established from this raster image and must be "
-            "confirmed manually."
+            f"A maximum of {requirement.maximum_characters_per_inch} characters per inch "
+            "applies. This must be confirmed from the physical label."
         ),
         evidence=["27 CFR 16.22(a)(4)"],
         measurements={
@@ -301,7 +299,7 @@ def _presence_check(localized: LocalizedWarning | None) -> WarningCheck:
     if localized is None:
         return WarningCheck(
             status="not_found",
-            explanation="No reliable Government Warning statement was located in the OCR evidence.",
+            explanation="No reliable Government Warning statement was found on the label.",
         )
     if localized.exact_heading_anchor and localized.distinctive_anchor:
         return WarningCheck(
@@ -334,8 +332,8 @@ def _wording_check(localized: LocalizedWarning | None) -> WarningCheck:
         return WarningCheck(
             status="match",
             explanation=_sentence(
-                "The extracted warning matches the prescribed wording after",
-                "OCR-safe whitespace normalization.",
+                "The warning text found on the label matches the prescribed wording,",
+                "allowing for minor spacing differences.",
             ),
             evidence=evidence,
         )
@@ -350,7 +348,7 @@ def _wording_check(localized: LocalizedWarning | None) -> WarningCheck:
             status="review",
             explanation=(
                 "The warning appears substantially consistent with the prescribed wording, "
-                "but OCR uncertainty requires manual review."
+                "but some unclear text requires manual review."
             ),
             evidence=evidence,
             measurements={
@@ -390,18 +388,18 @@ def _capitalization_check(localized: LocalizedWarning | None) -> WarningCheck:
     if observed == GOVERNMENT_WARNING_HEADING:
         return WarningCheck(
             status="match",
-            explanation="OCR preserves the heading as uppercase “GOVERNMENT WARNING.”",
+            explanation="The heading appears in uppercase as “GOVERNMENT WARNING.”",
             evidence=[observed],
         )
     if observed.casefold() == GOVERNMENT_WARNING_HEADING.casefold():
         return WarningCheck(
             status="mismatch",
-            explanation=f"OCR represents the heading as “{observed},” not in all capital letters.",
+            explanation=f"The heading appears as “{observed},” not in all capital letters.",
             evidence=[observed],
         )
     return WarningCheck(
         status="review",
-        explanation="OCR damage prevents a reliable capitalization determination for the heading.",
+        explanation="The heading text is too unclear to reliably check capitalization.",
         evidence=[observed],
     )
 
@@ -529,8 +527,8 @@ def _continuity_check(localized: LocalizedWarning | None) -> WarningCheck:
         return WarningCheck(
             status="review",
             explanation=(
-                "Both prescribed clauses occur in order, but OCR did not preserve both "
-                "numbered markers reliably."
+                "Both prescribed clauses occur in order, but the numbered markers were not "
+                "read reliably from the label."
             ),
             evidence=list(localized.source_lines),
         )
@@ -558,7 +556,7 @@ def _continuity_check(localized: LocalizedWarning | None) -> WarningCheck:
         return WarningCheck(
             status="review",
             explanation=(
-                "Low-confidence OCR fragments occur between otherwise ordered warning clauses."
+                "Some unclear text fragments occur between otherwise ordered warning clauses."
             ),
             evidence=list(localized.source_lines),
             measurements={"uncertain_word_count": len(unrelated_insertions)},
@@ -567,7 +565,7 @@ def _continuity_check(localized: LocalizedWarning | None) -> WarningCheck:
         return WarningCheck(
             status="review",
             explanation=_sentence(
-                "The clauses occur in order, but OCR geometry is unavailable to",
+                "The clauses occur in order, but layout information is unavailable to",
                 "assess continuity.",
             ),
             evidence=list(localized.source_lines),
@@ -640,8 +638,8 @@ def _continuity_check(localized: LocalizedWarning | None) -> WarningCheck:
     return WarningCheck(
         status="match",
         explanation=_sentence(
-            "Both numbered portions occur in sequence within spatially coherent",
-            "OCR lines; normal line wrapping is allowed.",
+            "Both numbered portions occur in sequence within a spatially coherent",
+            "block of text; normal line wrapping is allowed.",
         ),
         evidence=list(localized.source_lines),
         measurements={"ocr_line_count": len(localized.source_lines)},
@@ -657,7 +655,7 @@ def _separation_check(
         return WarningCheck(
             status="review",
             explanation=_sentence(
-                "OCR geometry is unavailable, so separation from surrounding",
+                "Layout information is unavailable, so separation from surrounding",
                 "information requires review.",
             ),
         )
@@ -669,7 +667,7 @@ def _separation_check(
     if not other_boxes:
         return WarningCheck(
             status="match",
-            explanation="No other OCR text was detected adjacent to the localized warning block.",
+            explanation="No other text was found adjacent to the warning.",
             measurements={"nearest_other_text_px": None},
         )
     distance = min(_box_distance(localized.bounding_box, box) for box in other_boxes)
@@ -688,8 +686,8 @@ def _separation_check(
         return WarningCheck(
             status="match",
             explanation=_sentence(
-                "OCR geometry shows substantial whitespace between the warning",
-                "and other detected text.",
+                "There is substantial spacing between the warning and other text",
+                "on the label.",
             ),
             measurements=measurements,
         )
@@ -783,16 +781,17 @@ def _contrast_check(localized: LocalizedWarning | None, image_data: bytes) -> Wa
         return WarningCheck(
             status="match",
             explanation=(
-                "Raster evidence shows strong text/background contrast across warning words "
-                "and stable nearby whitespace. This is not proof of physical legibility."
+                "The label image shows strong contrast between the warning text and its "
+                "background, with stable nearby spacing. This is not proof of physical "
+                "legibility."
             ),
             measurements=measurements,
         )
     return WarningCheck(
         status="review",
         explanation=_sentence(
-            "Contrast, background variation, or OCR quality is not strong enough",
-            "for a confident automated conclusion.",
+            "Contrast or background variation is not clear enough for a confident",
+            "automated conclusion.",
         ),
         measurements=measurements,
     )

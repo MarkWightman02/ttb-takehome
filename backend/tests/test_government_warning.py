@@ -92,7 +92,7 @@ def test_numbered_marker_ocr_damage_requires_review_instead_of_mismatch():
     assert result.checks.wording.status == "review"
     assert result.checks.continuous_statement.status == "review"
     assert result.overall_status == "review"
-    assert "OCR uncertainty requires manual review" in result.checks.wording.explanation
+    assert "requires manual review" in result.checks.wording.explanation
 
 
 def test_damaged_marker_punctuation_requires_review():

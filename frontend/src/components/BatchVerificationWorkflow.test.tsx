@@ -119,7 +119,7 @@ describe('batch verification workflow', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     expect(
-      screen.getAllByText(/abv must be greater than 0/).length,
+      screen.getAllByText(/The abv column must be greater than 0/).length,
     ).toBeGreaterThan(0);
   });
 });

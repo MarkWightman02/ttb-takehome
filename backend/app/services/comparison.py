@@ -73,7 +73,7 @@ def overall_summary(
     # clean result to "needs review" - it is reported as a separate note (see
     # verification.ts helpers), not folded into this summary sentence.
     if warning.manual_confirmation_required:
-        return "All automated checks matched."
+        return "All checks completed by this tool matched."
     return "All checked application fields match the label."
 
 

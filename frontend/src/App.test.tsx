@@ -10,20 +10,22 @@ describe('application shell', () => {
     expect(
       screen.getByRole('heading', {
         level: 1,
-        name: 'Verify label artwork against application data',
+        name: 'Label Verification',
       }),
     ).toBeVisible();
     expect(
-      screen.getByRole('region', { name: 'Application data' }),
+      screen.getByRole('region', { name: 'Application information' }),
     ).toBeVisible();
     expect(
-      screen.getByRole('region', { name: 'Submitted label artwork' }),
+      screen.getByRole('region', { name: 'Submitted label' }),
     ).toBeVisible();
     expect(screen.getByRole('region', { name: 'Verify label' })).toBeVisible();
     expect(
       screen.getByRole('region', { name: 'Review results' }),
     ).toBeVisible();
-    expect(screen.getByText(/values from the COLA application/i)).toBeVisible();
+    expect(
+      screen.getByText(/Enter the application information, upload the/i),
+    ).toBeVisible();
     expect(screen.getByText(/do not approve, reject/i)).toBeVisible();
     expect(
       screen.getByText('No verification has been performed.'),
@@ -83,7 +85,7 @@ describe('application shell', () => {
       screen.getByRole('region', { name: 'Upload application CSV' }),
     ).toBeVisible();
     expect(
-      screen.queryByRole('region', { name: 'Application data' }),
+      screen.queryByRole('region', { name: 'Application information' }),
     ).not.toBeInTheDocument();
   });
 });
