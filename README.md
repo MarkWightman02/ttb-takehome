@@ -18,8 +18,8 @@ This hosted prototype is a take-home demonstration, not an official Treasury or 
 
 The application runs local OCR, extracts visible label information, and identifies matches, discrepancies, missing evidence, and uncertain items. It is standalone and does not connect to COLAs Online.
 
-Single-label review remains the default. In this feature branch, select **Batch verification** for
-the optional manifest-based workflow; the stable public deployment is updated separately.
+Single-label review remains the default. Select **Batch verification** for the optional
+manifest-based workflow.
 
 ## Optional batch verification
 
@@ -334,8 +334,7 @@ remain the reproducible submission path.
 
 ## Submission status
 
-The scoped single-label prototype and optional client-side batch enhancement are implemented. The
-stable public deployment may be updated separately after branch review. Further real-label sampling
-would improve confidence in deterministic extraction limits, but the generated corpus and six TTB
-sample fixtures remain deliberately separate and neither is presented as production accuracy
-evidence.
+The scoped single-label prototype and optional client-side batch enhancement are implemented and
+merged to `main`; the public deployment reflects this branch. Further real-label sampling would
+improve confidence in deterministic extraction limits, but the generated corpus and six TTB sample
+fixtures remain deliberately separate and neither is presented as production accuracy evidence.

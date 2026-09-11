@@ -54,8 +54,23 @@ def test_supports_existing_brand_and_import_metadata_aliases(tmp_path):
     assert case.application.imported_product is False
 
 
-def test_missing_matching_json_is_reported(tmp_path):
+def test_image_without_matching_json_is_skipped_not_raised(tmp_path):
+    # Mirrors examples/: the T01-T20 synthetic fixtures share this directory
+    # with the real fixtures but use prefix-based metadata (T01.json), not a
+    # same-stem file, and must not break real-label-only discovery.
+    (tmp_path / "orphan.jpg").write_bytes(image_bytes("JPEG"))
+    matched = tmp_path / "sample.jpg"
+    matched.write_bytes(image_bytes("JPEG"))
+    matched.with_suffix(".json").write_text(json.dumps(application_data()), encoding="utf-8")
+
+    cases = discover_real_label_cases(tmp_path)
+
+    assert len(cases) == 1
+    assert cases[0].image_path == matched
+
+
+def test_no_matching_pairs_raises(tmp_path):
     (tmp_path / "orphan.jpg").write_bytes(image_bytes("JPEG"))
 
-    with pytest.raises(ValueError, match="Missing application data"):
+    with pytest.raises(ValueError, match="No real-label image/JSON pairs"):
         discover_real_label_cases(tmp_path)

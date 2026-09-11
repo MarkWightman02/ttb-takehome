@@ -60,7 +60,10 @@ def discover_real_label_cases(examples_dir: Path) -> tuple[RealLabelCase, ...]:
     for image_path in images:
         metadata_path = image_path.with_suffix(".json")
         if not metadata_path.is_file():
-            raise ValueError(f"Missing application data for {image_path.name}")
+            # The synthetic T01-T20 fixtures share this directory but use
+            # prefix-based metadata (e.g. T01.json), not a same-stem file;
+            # they are intentionally out of scope for this real-label-only set.
+            continue
         metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
         cases.append(
             RealLabelCase(
@@ -70,6 +73,8 @@ def discover_real_label_cases(examples_dir: Path) -> tuple[RealLabelCase, ...]:
                 application=_application_data(metadata),
             )
         )
+    if not cases:
+        raise ValueError(f"No real-label image/JSON pairs were found in {examples_dir}")
     return tuple(cases)
 
 
