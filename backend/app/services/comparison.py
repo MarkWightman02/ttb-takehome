@@ -68,11 +68,12 @@ def overall_summary(
         return "One or more detected fields differ from the application or prescribed warning."
     if statuses & {"review", "not_found"} or warning.automated_status in {"review", "not_found"}:
         return "One or more label checks require manual review."
+    # Physical type-size/CPI cannot be established from a raster image, so an
+    # unresolved manual-confirmation requirement never downgrades an otherwise
+    # clean result to "needs review" - it is reported as a separate note (see
+    # verification.ts helpers), not folded into this summary sentence.
     if warning.manual_confirmation_required:
-        return (
-            "All automated checks matched; physical Government Warning measurements "
-            "require manual confirmation."
-        )
+        return "All automated checks matched."
     return "All checked application fields match the label."
 
 

@@ -466,17 +466,26 @@ describe('label verification workflow', () => {
     render(<LabelOcrWorkflow />);
     completeForm();
     fireEvent.click(screen.getByRole('button', { name: 'Verify Label' }));
+    // A clean label with only physical measurements outstanding shows a plain
+    // Match badge and a separate, non-competing physical-confirmation note -
+    // not a Review badge and not a combined "some visual requirements" line.
     expect(
       await screen.findByText(
-        'Automated warning checks passed; physical dimensions require manual confirmation.',
+        'Physical Government Warning measurements require manual confirmation.',
       ),
     ).toBeVisible();
     const region = screen.getByRole('region', {
       name: 'Government Health Warning',
     });
-    expect(within(region).getByText('Automated checks matched')).toBeVisible();
-    // The clean-automated-pass case shows only the specific sentence, not
-    // also the generic "Manual physical confirmation required." paragraph.
+    const headerBadge = region.querySelector(
+      '.warning-section-heading .status-label',
+    );
+    expect(headerBadge).toHaveTextContent('Match');
+    expect(
+      within(region).getByText('Additional physical confirmation required.'),
+    ).toBeVisible();
+    // The clean-automated-pass case shows only the specific note, not also
+    // the generic "Manual physical confirmation required." paragraph.
     expect(
       within(region).queryByText('Manual physical confirmation required.'),
     ).toBeNull();

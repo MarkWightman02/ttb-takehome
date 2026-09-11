@@ -44,10 +44,7 @@ def test_manual_only_review_is_separate_from_automated_result():
     assert result.model_dump()["manual_confirmation_required"] is True
     assert result.checks.type_size.status == result.checks.characters_per_inch.status == "review"
     fields = compare_application_data(application(), complete_candidates())
-    assert overall_summary(fields, result) == (
-        "All automated checks matched; physical Government Warning measurements "
-        "require manual confirmation."
-    )
+    assert overall_summary(fields, result) == "All automated checks matched."
 
 
 @pytest.mark.parametrize(

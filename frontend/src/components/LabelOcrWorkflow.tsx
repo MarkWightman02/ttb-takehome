@@ -530,11 +530,23 @@ export function VerificationResults({
       not_applicable: 0,
     } satisfies Record<VerificationStatus, number>,
   );
+  const hasFieldIssue =
+    statusCounts.review + statusCounts.mismatch + statusCounts.not_found > 0;
+  const showPhysicalConfirmationNote =
+    !hasFieldIssue &&
+    automatedWarningStatus(result.government_warning) === 'match' &&
+    manualPhysicalConfirmationRequired(result.government_warning);
 
   return (
     <div className="verification-result" tabIndex={-1} ref={resultRef}>
       <div className="overall-summary" role="status" aria-live="polite">
         <strong>{result.overall_summary}</strong>
+        {showPhysicalConfirmationNote && (
+          <p className="physical-confirmation-note">
+            Physical Government Warning measurements require manual
+            confirmation.
+          </p>
+        )}
         <p aria-label="Application field status counts">
           {formatStatusCounts(statusCounts)}
         </p>
@@ -626,15 +638,17 @@ function GovernmentWarningResults({
       <div className="warning-section-heading">
         <h3 id={warningTitleId}>Government Health Warning</h3>
         <span className={`status-label status-${automatedStatus}`}>
-          {automatedChecksPassed
-            ? 'Automated checks matched'
-            : STATUS_LABELS[automatedStatus]}
+          {STATUS_LABELS[automatedStatus]}
         </span>
       </div>
       {manualRequired && (
-        <p>
+        <p
+          className={
+            automatedChecksPassed ? 'physical-confirmation-note' : undefined
+          }
+        >
           {automatedChecksPassed
-            ? 'Automated warning checks passed; physical dimensions require manual confirmation.'
+            ? 'Additional physical confirmation required.'
             : 'Manual physical confirmation required.'}
         </p>
       )}

@@ -191,18 +191,30 @@ The prescribed statement and presentation rules come from [27 CFR 16.21](https:/
 
 - **Deterministic text checks:** warning presence, prescribed wording, and heading capitalization use OCR text and localized TSV confidence. Likely OCR damage produces `review`; reliable substantive differences can produce `mismatch`.
 - **Image-based evidence:** heading/body weight, continuity, separation, and contrast use OCR geometry and request-scoped pixels. Weak, distorted, or ambiguous evidence remains `review`.
-- **Manual physical confirmation:** the applicable minimum type-size and maximum-characters-per-inch tiers are reported, but actual dimensions remain `review` because raster pixels do not establish millimeters or inches.
+- **Manual physical confirmation:** the applicable minimum type-size and maximum-characters-per-inch tiers are reported for reference, but actual printed dimensions remain a manual check because raster pixels do not establish millimeters or physical inches.
 
-Automated warning status and manual physical confirmation are separate. Clean automated
-checks show **Automated checks matched**, with neutral physical cards still marked
-**Manual confirmation**. Genuine OCR/image uncertainty and mismatches continue to take
-priority in the overall summary and batch rows. The API adds `automated_status` and
+The take-home instructions require verifying the Government Warning's presence, exact
+prescribed wording, and heading presentation (all-caps, bold) — they do not ask for a
+physical type-size or characters-per-inch measurement. Those two checks were added by
+this project as extra regulatory context from [27 CFR 16.22](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.22),
+not because the assignment requires them, so they are informational/manual and never
+block the required, image-verifiable result.
+
+The eight required checks above roll up into `government_warning.automated_status`,
+which is what drives the overall result: a label with clean automated checks shows
+**Match**, even while the two physical checks still show **Manual confirmation** in a
+visually separate, non-competing note — never a **Review** badge implying OCR/image
+uncertainty. Genuine OCR/image uncertainty and mismatches still take priority in the
+overall summary and batch rows. The API adds `automated_status` and
 `manual_confirmation_required` inside `government_warning`; its legacy `overall_status`
-still includes physical reviews. Batch CSV retains that legacy column and adds
+still includes physical reviews for backward compatibility, but nothing in the
+aggregation logic reads it anymore. Batch CSV retains that legacy column and adds
 `automated_warning_status` and `manual_physical_confirmation_required`. Batch `match`
-means automated checks matched, not physical compliance. DPI metadata alone is not trusted.
-See [physical-confirmation semantics](docs/physical-warning-semantics.md) for the decision
-and authoritative references. No PDF or scale-measurement support was added.
+means all required automated checks matched, not physical compliance or final
+regulatory approval. DPI metadata, pixel dimensions, and container volume are never
+used to infer physical scale. See [physical-confirmation semantics](docs/physical-warning-semantics.md)
+for the decision and authoritative references. No PDF or scale-measurement support was
+added; verified PDF/vector dimensions remain a possible future enhancement only.
 
 These results support reviewer inspection; they are not regulatory approval or a legal-compliance determination. Detailed rules and limitations are documented in [architecture.md](docs/architecture.md).
 

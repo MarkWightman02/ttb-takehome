@@ -66,9 +66,9 @@ def analyze_government_warning(
     type_size = WarningCheck(
         status="review",
         explanation=(
-            f"A minimum type size of {requirement.minimum_type_size_mm} mm applies, but "
-            "physical type height cannot be established from image pixels without a "
-            "trustworthy physical scale."
+            f"A minimum type size of {requirement.minimum_type_size_mm} mm applies. Physical "
+            "type height cannot be established from this raster image and must be confirmed "
+            "manually."
         ),
         evidence=["27 CFR 16.22(b)"],
         measurements={
@@ -80,9 +80,9 @@ def analyze_government_warning(
     characters_per_inch = WarningCheck(
         status="review",
         explanation=(
-            f"The applicable limit is {requirement.maximum_characters_per_inch} "
-            "characters per inch, but pixel width does not establish physical inches "
-            "without a trustworthy scale."
+            f"The applicable limit is {requirement.maximum_characters_per_inch} characters per "
+            "inch. Physical CPI cannot be established from this raster image and must be "
+            "confirmed manually."
         ),
         evidence=["27 CFR 16.22(a)(4)"],
         measurements={

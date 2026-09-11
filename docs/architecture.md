@@ -55,17 +55,21 @@ Visual-weight analysis crops word boxes from the already preprocessed in-memory 
 
 Continuity locates both prescribed clauses semantically, checks their order, identifies confidently unrelated inserted words, and then considers OCR hierarchy and unusually large interline gaps. A damaged numbered marker or PSM 11 block fragmentation alone produces `review`, not `mismatch`; confidently absent, reordered, or interrupted clauses remain mismatches. Separation measures nearby OCR geometry and whitespace but does not equate a bounding-box gap with legal compliance. Contrast analysis combines foreground/background luminance separation, background variance, and OCR confidence. Complex or weak evidence requires review.
 
-Container volume selects the 1/2/3 mm and 40/25/12 CPI regulatory tiers. Physical size and CPI remain `review` because normal raster artwork provides no trustworthy scale. The implementation does not convert arbitrary DPI metadata or pixel counts into physical measurements. This is consistent with [TTB's warning about distortions in submitted label images](https://www.ttb.gov/public-information/industry-circulars/archives/2011/11-04).
+Container volume selects the 1/2/3 mm and 40/25/12 CPI regulatory tiers. Physical size and CPI remain `review` because normal raster artwork provides no trustworthy scale. The implementation does not convert arbitrary DPI metadata or pixel counts into physical measurements. This is consistent with [TTB's warning about distortions in submitted label images](https://www.ttb.gov/public-information/industry-circulars/archives/2011/11-04). The take-home instructions themselves only require verifying warning presence, exact wording, and heading presentation; type size and characters-per-inch are additional regulatory context this project chose to surface, not a required scoring gate, so they never block the required, image-verifiable result.
 
-`GovernmentWarningAnalysis.automated_status` is computed from the eight text/image checks;
-`manual_confirmation_required` is computed independently from the two physical checks.
-Neither value is supplied by application input. The legacy `overall_status` remains a
-comprehensive status for compatibility. Summaries and batch classification use automated
-status, while still prioritizing any actual mismatch (including a physical mismatch if
-trusted physical evidence is ever supported). Manual-only requirements are displayed
-separately, not as OCR uncertainty. Individual check results and thresholds are unchanged.
-New frontend helpers fall back conservatively to legacy status if the additive fields are
-absent. CSV exports include both statuses and the explicit physical-confirmation flag.
+`GovernmentWarningAnalysis.automated_status` is the single source of truth for the eight
+required text/image checks, and is also where a hypothetical future physical *mismatch*
+would surface (never silently hidden) — it is not re-derived from `overall_status`
+elsewhere. `manual_confirmation_required` is computed independently from the two physical
+checks and is `True` under every raster input today, since those checks cannot yet be
+anything but `review`. Neither value is supplied by application input. The legacy
+`overall_status` remains a comprehensive status for backward compatibility, but nothing in
+`comparison.py` or the frontend reads it anymore. Manual-only requirements are displayed
+separately from OCR/image uncertainty: a clean label shows a plain **Match** badge plus a
+neutral, non-competing physical-confirmation note, never a **Review** badge. Individual
+check results and thresholds are unchanged. New frontend helpers fall back conservatively
+to legacy status if the additive fields are absent. CSV exports include both statuses and
+the explicit physical-confirmation flag.
 
 The specification lists common fields but does not define a complete rule set for every beverage. This prototype therefore does not turn that list into unconditional requirements or guess beverage-specific exceptions and regulatory tolerances.
 

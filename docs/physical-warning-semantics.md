@@ -1,5 +1,27 @@
 # Physical warning requirements and status semantics
 
+## Addendum: scope and wording follow-up
+
+The authoritative take-home instructions require verifying the Government Warning's
+presence, exact prescribed wording, and heading presentation (all-caps, bold) — they do
+not ask for a physical type-size or characters-per-inch measurement. Those two checks
+are additional regulatory context this project chose to surface from 27 CFR 16.22, not a
+required scoring gate, and this was reconfirmed directly against the instructions repo in
+a follow-up pass.
+
+That follow-up pass also hardened `automated_status` so a hypothetical future physical
+*mismatch* is never hidden (it is now the single source of truth backend and frontend
+both rely on, rather than a separate `overall_status` fallback), and refined the exact
+wording below: the Government Warning badge for a clean label now shows a plain **Match**
+(not a custom "Automated checks matched" label) with manual physical confirmation shown as
+a separate, non-competing note reading "Additional physical confirmation required."; the
+top-level summary for that case is the shorter **"All automated checks matched."**, with
+"Physical Government Warning measurements require manual confirmation." shown as a
+distinct secondary note rather than joined into one sentence. The status *hierarchy* and
+JSON shape documented below (`automated_status`, `manual_confirmation_required`, legacy
+`overall_status`) are unchanged; only the exact display strings quoted in this report
+reflect the wording at the time it was written.
+
 ## Decision
 
 Manual-only physical requirements should **not** force the automated warning
