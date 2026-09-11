@@ -63,6 +63,14 @@ Select **Verify Label**. The summary reads *"All checks completed by this tool m
 
 Other fixtures in [`examples/`](examples/README.md) deliberately produce `review` and `not_found` results — `FBN` and `MHB`, for instance, have no responsible-party cue on the label, so producer name and address are correctly reported as not found rather than guessed.
 
+## Approach, tools, and assumptions
+
+**Approach:** The reviewer enters the information from the alcohol label application and uploads the submitted label artwork. The application reads the label on the server it is running on, pulls out the individual pieces of information it can find, and compares each one against what the reviewer entered using fixed, predictable comparison rules. Each item is reported as **Match**, **Review**, **Mismatch**, **Not found**, or **Not applicable**. The Government Health Warning is evaluated separately, with its own set of checks.
+
+**Tools:** React, TypeScript, and Vite for the reviewer interface; Python and FastAPI for the API; local Tesseract for reading label text, with Pillow for image validation and preprocessing; pytest and Vitest for tests; Docker and Docker Compose for packaging and local startup.
+
+**Assumptions:** The prototype is given reasonably clear raster label artwork, and the application information is entered by the reviewer rather than pulled from another system — there is no COLAs Online integration. No database or persistent upload storage is needed, and no cloud AI or LLM service is used for verification. Physical Government Warning measurements such as printed type size and characters per inch cannot be reliably established from ordinary raster artwork, so they are reported for manual confirmation rather than judged automatically. Throughout, the application is decision support for a human reviewer and does not make final regulatory determinations.
+
 ## Result meanings
 
 - **Match:** the label supports the entered application value or checked requirement.
