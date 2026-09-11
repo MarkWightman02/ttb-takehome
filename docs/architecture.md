@@ -8,6 +8,33 @@ React, TypeScript, and Vite own presentation in `frontend/`. FastAPI and Pydanti
 
 ## Request flow
 
+```text
+Reviewer
+   |
+   v
+React UI  (application fields + one label image)
+   |
+   v
+FastAPI  POST /api/labels/verify
+   |
+   +--> Image validation      (type/size/dimensions, declared MIME vs decoded content)
+   |
+   +--> Preprocessing         (EXIF orientation, grayscale, contrast, bounded upscale)
+   |
+   +--> Local label reading   (Tesseract TSV, full image; <=3 bounded targeted re-reads)
+   |
+   +--> Structured extraction (spatial lines, panels, field candidates)
+   |
+   +--> Deterministic comparison + Government Warning analysis
+   |
+   v
+Typed verification results  (status, expected vs observed, evidence, explanation)
+```
+
+Nothing in this path calls a cloud service, and no uploaded image is written to disk. For the
+reviewer-facing meaning of each result, see [USER_GUIDE.md](USER_GUIDE.md); for the comparison
+principles in brief, see [VERIFICATION_LOGIC.md](VERIFICATION_LOGIC.md).
+
 During development, the browser sends `/api/health` and the multipart OCR request to Vite on port 5173. Vite proxies `/api` to FastAPI on port 8000. An explicit origin allowlist also supports direct local API calls; credentials are unnecessary. Production serves the compiled frontend and API from one FastAPI process and one origin.
 
 Both label endpoints share the same bounded upload, Pillow validation, worker-thread preprocessing, and configured `OcrService` path. `POST /api/labels/verify` additionally accepts the core fields, producer/bottler name and address, and explicit import applicability with conditional country of origin. Its full-image result remains authoritative for layout and warning analysis; uncertain core fields can request at most three targeted crops from the optional regional OCR capability. The multipart upload is closed in a `finally` block. Starlette may spool multipart content to secure framework-managed temporary storage; the application creates no label file and Tesseract reads PNG bytes from stdin. Image bytes and extracted text are never logged.
@@ -95,6 +122,6 @@ Runtime verification uses local OCR and image analysis without a mandatory cloud
 
 A multi-stage Dockerfile builds React with Node and installs Python dependencies, Tesseract, and English language data into a slim Python image. Its final stage runs as a non-root user and contains one web service. `TTB_FRONTEND_DIST` enables static serving; absent configuration leaves an API-only development server. The shell uses a single page, so there is no client-side route fallback that could hide unknown API paths or missing assets.
 
-Docker Compose deliberately runs separate frontend and backend development services for hot reload. This does not change the single-container production target. Versions are pinned in package manifests, the pnpm lockfile, Python constraints, and base-image tags. Tags can receive image rebuilds; digest pinning and image publication remain deployment work.
+Docker Compose's default service (`app`) runs that single-container production target, so `docker compose up --build -d` reproduces the deployed shape on one port. The separate frontend and backend hot-reload services remain available behind the `dev` profile for source work; see [DEVELOPMENT.md](DEVELOPMENT.md). Versions are pinned in package manifests, the pnpm lockfile, Python constraints, and base-image tags. Tags can receive image rebuilds; digest pinning and image publication remain deployment work.
 
-The absence of application persistence simplifies retention and keeps the prototype standalone. Batch state is browser-local and intentionally has no resumable history. Authentication, COLAs Online integration, server-side batch jobs, and production governance are outside this slice. Tesseract currently uses English and page-segmentation mode 11 and may struggle with curved, reflective, rotated, stylized, low-resolution, or poorly photographed labels. The panel model is intentionally lightweight; overlapping panels, circular text, severe perspective, weak column gaps, or reverse-contrast decorative bands can remain ambiguous. OCR confidence and local image heuristics are evidence rather than proof of typeface, physical dimensions, contrast under ordinary conditions, or final compliance. Deterministic extraction may produce `review` or `not_found` outcomes when the source does not yield reliable text. All processing remains local and deterministic; no cloud OCR or LLM is used. The production reviewer deployment is `https://ttb.markwightman.org`; deploying the optional batch branch remains a separate release action.
+The absence of application persistence simplifies retention and keeps the prototype standalone. Batch state is browser-local and intentionally has no resumable history. Authentication, COLAs Online integration, server-side batch jobs, and production governance are outside this slice. Tesseract currently uses English and page-segmentation mode 11 and may struggle with curved, reflective, rotated, stylized, low-resolution, or poorly photographed labels. The panel model is intentionally lightweight; overlapping panels, circular text, severe perspective, weak column gaps, or reverse-contrast decorative bands can remain ambiguous. OCR confidence and local image heuristics are evidence rather than proof of typeface, physical dimensions, contrast under ordinary conditions, or final compliance. Deterministic extraction may produce `review` or `not_found` outcomes when the source does not yield reliable text. All processing remains local and deterministic; no cloud OCR or LLM is used. The production reviewer deployment is `https://ttb.markwightman.org`.

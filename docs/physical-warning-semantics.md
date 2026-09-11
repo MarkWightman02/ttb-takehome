@@ -15,9 +15,10 @@ both rely on, rather than a separate `overall_status` fallback), and refined the
 wording below: the Government Warning badge for a clean label now shows a plain **Match**
 (not a custom "Automated checks matched" label) with manual physical confirmation shown as
 a separate, non-competing note reading "Additional physical confirmation required."; the
-top-level summary for that case is the shorter **"All automated checks matched."**, with
-"Physical Government Warning measurements require manual confirmation." shown as a
-distinct secondary note rather than joined into one sentence. The status *hierarchy* and
+top-level summary for that case is the shorter **"All checks completed by this tool
+matched."**, with "Physical Government Warning measurements still need to be confirmed
+manually." shown as a distinct secondary note rather than joined into one sentence. The
+wording in this paragraph was last reconciled against the code on 2026-09-11. The status *hierarchy* and
 JSON shape documented below (`automated_status`, `manual_confirmation_required`, legacy
 `overall_status`) are unchanged; only the exact display strings quoted in this report
 reflect the wording at the time it was written.

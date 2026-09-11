@@ -4,6 +4,8 @@ The [instruction repository][spec], including its stakeholder interviews, is the
 
 `User` means the accompanying first-task request. Linked stakeholder names refer to the authoritative interviews. The implementation and acceptance columns are engineering proposals for meeting those requirements; they are not additional stakeholder mandates.
 
+Sections below separate what the take-home requires (**Core MVP**) from what this project added on top (**Optional enhancement**) and what was deliberately left out (**Future / out of scope**). For how the implementation behaves, see [architecture.md](architecture.md) and [VERIFICATION_LOGIC.md](VERIFICATION_LOGIC.md).
+
 ## Core MVP
 
 ### Implemented foundation and verification slices
