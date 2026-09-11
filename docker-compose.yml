@@ -1,5 +1,19 @@
 services:
+  # Default reviewer path: `docker compose up --build -d` starts only this
+  # single-container production build (frontend + API + Tesseract), matching
+  # the README Quick Start. No environment variables are required; the
+  # production image already sets its own via the Dockerfile.
+  app:
+    build:
+      context: .
+      target: production
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  # Development-only services with hot reload and bind mounts. Not started by
+  # a bare `docker compose up`; run with `docker compose --profile dev up`.
   backend:
+    profiles: ["dev"]
     build:
       context: .
       target: backend-development
@@ -20,6 +34,7 @@ services:
       start_period: 10s
 
   frontend:
+    profiles: ["dev"]
     build:
       context: .
       target: frontend-development

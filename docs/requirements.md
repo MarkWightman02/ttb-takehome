@@ -20,7 +20,7 @@ The [instruction repository][spec], including its stakeholder interviews, is the
 | Conservative preprocessing | User | Implemented | EXIF orientation, grayscale, automatic contrast, limited small-image upscale, light sharpening | Preprocessing is independently tested and supplies normalized PNG bytes without hard thresholding. |
 | Request-scoped privacy | User; [Marcus][marcus] | Implemented | Close multipart uploads reliably and stream normalized bytes to Tesseract stdin | The application creates no persistent label file and does not log image contents or extracted text. |
 | Configuration and tooling | User | Now | `.gitignore`, `.env.example`, pinned dependencies, appropriate lint/format configuration | Dependencies install; frontend tests, lint, type checking and build pass. |
-| Container deployment foundation | User | Now | Dockerfile builds the frontend and packages it with FastAPI; Compose supports development | Production frontend and API share one container; Docker build is checked when available. |
+| Container deployment foundation | User | Now | Dockerfile builds the frontend and packages it with FastAPI; Compose's default service runs that production build, with a `dev` profile for hot reload | Production frontend and API share one container; Docker build is checked when available. |
 | Reviewer documentation | User; [deliverables][deliverables] | Now | Requirements, architecture and README covering setup, tests, Docker, assumptions and status | Instructions match implemented behavior; verification results and any unavailable checks are reported. |
 
 ### Implemented product behavior

@@ -1,237 +1,156 @@
 # TTB Label Verification
 
-A standalone decision-support prototype for Treasury/TTB label reviewers. It extracts visible information from submitted alcohol-label artwork and compares it with application values supplied by the reviewer. The [take-home instructions](https://github.com/treasurytakehome-rgb/instructions) and stakeholder interviews define its scope.
+A standalone decision-support prototype for Treasury/TTB label reviewers. It reads visible information from submitted alcohol-label artwork and compares it with application values entered by the reviewer, flagging matches, differences, and anything that needs a human look. The [take-home instructions](https://github.com/treasurytakehome-rgb/instructions) and stakeholder interviews define its scope.
 
-## Try the live demo
+No API keys, database, cloud service, or local OCR installation is required. The Docker image contains the frontend, backend, Tesseract, and required language data; nothing else needs to be installed to run it.
 
-[Open the reviewer prototype](https://ttb.markwightman.org)
+## Live demo
+
+[https://ttb.markwightman.org](https://ttb.markwightman.org)
 
 This hosted prototype is a take-home demonstration, not an official Treasury or TTB service. It does not approve applications or determine legal compliance.
 
-## Reviewer workflow
+## Quick Start
 
-1. Start with the expected application/COLA data.
-2. Enter the brand, class/type, ABV, net contents, responsible party, address, and import information.
-3. Upload one submitted PNG, JPEG, or WebP label image.
-4. Select **Verify Label**.
-5. Review the extracted evidence, field comparisons, and Government Health Warning checks.
+Prerequisites: **Git** and **Docker** (Docker Desktop, or Docker Engine with Compose v2).
 
-The application runs local OCR, extracts visible label information, and identifies matches, discrepancies, missing evidence, and uncertain items. It is standalone and does not connect to COLAs Online.
-
-Single-label review remains the default. Select **Batch verification** for the optional
-manifest-based workflow.
-
-## Optional batch verification
-
-Download the CSV template in the batch view, add one application row per image, select the
-corresponding images, review the deterministic filename mapping, and select **Verify Batch**. Each
-valid item is sent separately to the existing `POST /api/labels/verify` endpoint, so batch and
-single-label review use the same OCR, extraction, comparison, warning analysis, and error behavior.
-
-The CSV columns are:
-
-```text
-image_filename,brand_name,class_type,abv,net_contents,producer_name,producer_address,imported_product,country_origin
+```sh
+git clone https://github.com/MarkWightman02/ttb-takehome.git
+cd ttb-takehome
+docker compose up --build -d
 ```
 
-Use `true` or `false` for `imported_product`; `country_origin` is required only for imports. The
-parser supports quoted commas, escaped quotes, CRLF, a UTF-8 BOM, and blank optional values.
-Filename matching removes CSV path prefixes and normalizes Unicode composition, surrounding
-whitespace, and case. Duplicate names, missing images, unmatched uploads, unsupported images, and
-invalid rows remain visible rather than being guessed or skipped.
+Open [http://localhost:8000](http://localhost:8000).
 
-The browser accepts at most 300 manifest records and schedules two verification requests at a
-time. One failed label does not stop the queue, failed items can be retried, and stopping prevents
-new requests while active ones finish. Each row shows a concise outcome and can expand the normal
-detailed result. Results can be exported as CSV. Batch state is browser-local and is discarded on
-reload; the server stores no batch history, application record, or image.
+Verify:
+
+```sh
+curl http://localhost:8000/api/health
+# {"status":"ok","service":"ttb-label-verification"}
+```
+
+Stop:
+
+```sh
+docker compose down
+```
+
+This builds and runs the single production container: compiled frontend, FastAPI, Tesseract, and English OCR data, served on one port as a non-root user. No environment variables need to be set — the image already configures itself for production. No host directories are mounted and nothing is written outside the container.
+
+## How to use
+
+1. Enter the information from the alcohol label application.
+2. Upload the submitted label artwork.
+3. Select **Verify Label** and review any differences.
+
+An optional **Batch verification** view repeats this for many labels at once — see [Batch verification](#batch-verification) below.
 
 ## Result meanings
 
-- **Match:** image-derived evidence supports the entered application value or checked requirement.
-- **Review:** evidence is plausible, but OCR or image uncertainty prevents a confident automated conclusion. This is intentional conservative behavior, not necessarily an error.
-- **Mismatch:** reliable evidence indicates a substantive discrepancy.
-- **Not found:** the system could not locate reliable supporting label evidence.
-- **Not applicable:** the check does not apply to the submitted application context.
+- **Match:** the label supports the entered application value or checked requirement.
+- **Review:** the evidence is plausible, but the tool cannot reach a confident conclusion. This is intentional conservative behavior, not necessarily an error.
+- **Mismatch:** the label and application appear to differ.
+- **Not found:** the tool could not locate reliable supporting evidence on the label.
+- **Not applicable:** the check does not apply to this application (for example, country of origin on a domestic product).
 
-## What it checks
+## Government Health Warning & physical measurements
 
-- Brand name, class/type designation, numeric ABV, and supported metric or U.S. fluid-volume forms.
-- Producer/bottler name and address.
-- Country of origin when the reviewer marks the application as imported.
-- Government Health Warning text and available image-based presentation evidence.
+The Government Warning's presence, exact prescribed wording, and heading presentation (all-caps, bold) can be checked directly from the uploaded image, along with body formatting, continuity, layout, and readability.
 
-Physical type size and characters per inch still require reviewer confirmation because an ordinary raster image has no trustworthy physical scale. The prototype does not implement a comprehensive beverage-regulation engine, authentication, persistence, or final regulatory decisions.
+Minimum physical type size and maximum characters-per-inch are additional regulatory context from [27 CFR 16.22](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.22) — the take-home itself does not ask for a physical measurement. An ordinary raster image has no trustworthy physical scale, so these two are shown separately for **manual confirmation** and never turn an otherwise-clean automated result into a review or failure. A label with clean automated checks shows **Match**; the physical note stays visually neutral and secondary, not a warning.
 
-## How it works
+This tool is decision support for a human reviewer, not a final regulatory approval. See [physical-confirmation semantics](docs/physical-warning-semantics.md) for the full decision record and authoritative references.
+
+## Batch verification
+
+Batch is optional. In the batch view:
+
+1. Download the CSV template.
+2. Add one row per application.
+3. Upload the completed CSV.
+4. Upload the matching label images — each row's `image_filename` must match an uploaded image's filename.
+5. Select **Verify Batch**.
+6. Review results in the table, or export them as CSV.
+
+The CSV columns are `image_filename, brand_name, class_type, abv, net_contents, producer_name, producer_address, imported_product, country_origin` (use `true`/`false` for `imported_product`; `country_origin` only for imports). For example, a row with `image_filename = label-001.png` is matched by uploading a file named `label-001.png`.
+
+Batch and single-label review share the same verification endpoint, so results mean the same thing in both places. Up to 300 rows are supported per batch. Batch state lives in the browser only; the server keeps no batch history, application record, or image.
+
+## Architecture
 
 ```text
-Label image + expected application data
-  → One request, or an optional two-worker browser queue
-  → Validation and selective preprocessing/upscaling
-  → Full-image Tesseract TSV OCR (PSM 11)
-  → Spatial panel reconstruction and warning localization
-  → Up to three conditional regional OCR refinements
+Label image + application information
+  → Validation and preprocessing
+  → Local Tesseract OCR (full image, plus a few bounded targeted re-reads when needed)
   → Deterministic extraction, normalization, and comparison
-  → Explained reviewer results and preserved OCR evidence
+  → Explained reviewer results
 ```
 
-FastAPI and Pydantic provide the API and typed results; React, TypeScript, and Vite provide the reviewer interface. Tesseract runs locally. Difficult brand, class/type, or net-contents regions can receive bounded PSM 6/7 crop refinement, while the full-image result remains the layout and warning evidence. No cloud OCR or LLM is required.
+- **Frontend:** React, TypeScript, Vite.
+- **Backend:** FastAPI, Pydantic, local Tesseract OCR — no cloud OCR or LLM service is used or required.
+- **Deployment:** one production container serves the compiled frontend and the API from a single origin; no database.
 
-Uploaded images are request-scoped and are not persisted by the application. No database is required, and the production container runs as a non-root user. These are implementation choices, not a general security certification.
+See [architecture.md](docs/architecture.md) for the full request flow, extraction rules, and tradeoffs, and [requirements.md](docs/requirements.md) for the requirement-by-requirement scope and sourcing.
 
-## Repository layout
+### Repository layout
 
 ```text
 frontend/           React + TypeScript + Vite; Vitest and ESLint
-frontend/src/batchVerification.ts  CSV validation, mapping, queue, summaries, export
 backend/app/        FastAPI routes, typed models, validation, preprocessing, local OCR
 backend/tests/      pytest API and foundation checks
-docs/               Requirements matrix and architecture decisions
-Dockerfile          Development targets and single-container production build
-docker-compose.yml  Frontend/backend development services with hot reload
+docs/               Requirements matrix, architecture decisions, and dated evaluation reports
+examples/           Real and synthetic label fixtures used for regression testing
+Dockerfile          Development targets and the single-container production build
+docker-compose.yml  Default production service, plus a `dev` profile for hot reload
 ```
 
-Vite proxies `/api` to FastAPI during development. In production, FastAPI serves the compiled React files and API from one container.
+## Development setup
 
-See [requirements](docs/requirements.md) and [architecture](docs/architecture.md) for scope, sources, request flow, assumptions, and tradeoffs.
+The Docker Quick Start above is the easiest way to run the application. This section is only needed if you're modifying the source.
 
-## Prerequisites
+Prerequisites:
 
-- Python 3.12 (verified with 3.12.14).
-- Node.js 24 LTS and pnpm 11.19.0. Install pnpm with `npm install --global pnpm@11.19.0` if needed.
-- Tesseract OCR with English language data, available as `tesseract` on `PATH`. The Docker image installs it automatically.
-- Docker with Compose v2, only for the container instructions.
+- Python 3.12 (verified with 3.12.14)
+- Node.js 24 LTS and pnpm 11.19.0 (`npm install --global pnpm@11.19.0`)
+- Tesseract OCR with English language data, available as `tesseract` on `PATH`
 
-Dependency installation and image builds need network access. Once built, the application needs no outbound network access. Direct dependency versions, frontend transitive dependencies, Python constraints, and container image versions are pinned.
+A hot-reload Docker Compose path is also available and needs none of the above installed locally:
 
-## Local setup
+```sh
+docker compose --profile dev up --build backend frontend
+```
 
-Run these commands from the repository root. Create a virtual environment:
+Open [http://localhost:5173](http://localhost:5173) (frontend, proxies `/api` to the backend) and [http://localhost:8000/api/health](http://localhost:8000/api/health) (backend). Source directories are bind-mounted for reload; stop with Ctrl+C, then `docker compose down`.
+
+### Native setup
+
+From the repository root:
 
 ```sh
 python -m venv .venv
-```
-
-Activate it in PowerShell:
-
-```powershell
-.venv\Scripts\Activate.ps1
-```
-
-Or in macOS/Linux shells:
-
-```sh
-source .venv/bin/activate
-```
-
-If PowerShell activation is restricted, use `.venv\Scripts\python.exe` instead of `python` in the commands below; no execution-policy change is necessary.
-
-Install backend dependencies, including test/lint tools:
-
-```sh
+source .venv/bin/activate        # or .venv\Scripts\Activate.ps1 on Windows
 python -m pip install -c backend/constraints.txt -e "./backend[dev]"
+cd frontend && pnpm install --frozen-lockfile && cd ..
 ```
 
-Install frontend dependencies:
-
-```sh
-cd frontend
-pnpm install --frozen-lockfile
-cd ..
-```
-
-Optionally copy `.env.example` to `.env` at the repository root. Defaults work without that file. The backend reads `TTB_` settings, and Vite reads `VITE_API_PROXY_TARGET` for its development proxy. Neither setting needs to contain a secret.
-
-Verify the local OCR runtime before starting the API:
-
-```sh
-tesseract --version
-```
-
-If Tesseract is installed outside `PATH`, set `TTB_TESSERACT_COMMAND` in `.env` to its executable path. Normal unit tests inject an OCR provider; the conditional real-engine tests execute preprocessing and the installed Tesseract binary when it is available.
-
-### Run the backend
-
-From the root with the virtual environment active:
+Run the backend:
 
 ```sh
 python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Health: [http://127.0.0.1:8000/api/health](http://127.0.0.1:8000/api/health)
-
-```json
-{"status":"ok","service":"ttb-label-verification"}
-```
-
-API documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs). Health reports that the API is running; it does not check an OCR engine.
-
-### OCR endpoint
-
-`POST /api/labels/ocr` accepts exactly one multipart field named `file`.
-
-- Supported formats: PNG, JPEG, and WebP. File contents must match the declared MIME type; filename extensions are not trusted.
-- Limits: 10 MB, at most 12,000 pixels on either edge, and at most 40 million pixels total. These defaults are configurable through the documented `TTB_` settings.
-- Preprocessing: EXIF orientation correction, grayscale conversion, automatic contrast, selective enlargement toward a 2,400-pixel long edge (up to 4× for low-resolution inputs), and light sharpening. The pipeline avoids hard thresholding that could erase label artwork. A separate request-scoped image preserves the original tonal evidence at the same orientation and scale for visual checks, so OCR contrast enhancement cannot create false contrast evidence.
-- Privacy: bytes remain request-scoped. FastAPI may spool multipart data to secure framework-managed temporary storage; the upload is closed in a `finally` block. The application sends the normalized image to Tesseract over standard input and creates no persistent label file.
-- Output: raw text, engine identifier, total and OCR processing duration, original image metadata, and useful warnings. Internally, the same Tesseract TSV response supplies word confidence, hierarchy, and pixel bounding boxes for warning analysis. Raw text is not a compliance decision.
-
-Stylized fonts, curved bottles, glare, low contrast, unusual layouts, and poor photographs can reduce accuracy. Low-resolution labels may therefore produce `review` or `not_found` rather than a guessed value. This slice uses English Tesseract with sparse-text page-segmentation mode 11, which performed more reliably on the evaluated side-by-side TTB samples. Word confidence and geometry are OCR evidence, not proof of typography or legal legibility.
-
-### Verification endpoint and workflow
-
-`POST /api/labels/verify` accepts one image plus the expected application fields. Country of origin is required only when the reviewer marks the product as imported. Each request starts with one full-image TSV pass; uncertain brand/class candidates or a missing volume with suitable geometry can trigger up to three crop OCR calls. The raw `/api/labels/ocr` endpoint remains a single pass.
-
-Comparison is deterministic and field-specific: harmless text presentation differences are normalized, ABV is compared numerically, and supported metric/U.S. fluid volumes are normalized to milliliters. Ambiguous or missing evidence is preserved for review instead of guessed. The response includes explanations, raw OCR, warning analysis, timing, call count, and secondary refinement evidence. See [architecture.md](docs/architecture.md) for extraction rules and tradeoffs.
-
-### Government Health Warning analysis
-
-The prescribed statement and presentation rules come from [27 CFR 16.21](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.21), [27 CFR 16.22](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.22), and [current TTB warning guidance](https://www.ttb.gov/regulated-commodities/beverage-alcohol/beer/labeling/malt-beverage-health-warning). The application reports separate results for presence, wording, heading capitalization, heading boldness, non-bold body text, continuity, separation, contrast/legibility, type size, and characters per inch.
-
-- **Deterministic text checks:** warning presence, prescribed wording, and heading capitalization use OCR text and localized TSV confidence. Likely OCR damage produces `review`; reliable substantive differences can produce `mismatch`.
-- **Image-based evidence:** heading/body weight, continuity, separation, and contrast use OCR geometry and request-scoped pixels. Weak, distorted, or ambiguous evidence remains `review`.
-- **Manual physical confirmation:** the applicable minimum type-size and maximum-characters-per-inch tiers are reported for reference, but actual printed dimensions remain a manual check because raster pixels do not establish millimeters or physical inches.
-
-The take-home instructions require verifying the Government Warning's presence, exact
-prescribed wording, and heading presentation (all-caps, bold) — they do not ask for a
-physical type-size or characters-per-inch measurement. Those two checks were added by
-this project as extra regulatory context from [27 CFR 16.22](https://www.ecfr.gov/current/title-27/chapter-I/subchapter-A/part-16/subpart-C/section-16.22),
-not because the assignment requires them, so they are informational/manual and never
-block the required, image-verifiable result.
-
-The eight required checks above roll up into `government_warning.automated_status`,
-which is what drives the overall result: a label with clean automated checks shows
-**Match**, even while the two physical checks still show **Manual confirmation** in a
-visually separate, non-competing note — never a **Review** badge implying OCR/image
-uncertainty. Genuine OCR/image uncertainty and mismatches still take priority in the
-overall summary and batch rows. The API adds `automated_status` and
-`manual_confirmation_required` inside `government_warning`; its legacy `overall_status`
-still includes physical reviews for backward compatibility, but nothing in the
-aggregation logic reads it anymore. Batch CSV retains that legacy column and adds
-`automated_warning_status` and `manual_physical_confirmation_required`. Batch `match`
-means all required automated checks matched, not physical compliance or final
-regulatory approval. DPI metadata, pixel dimensions, and container volume are never
-used to infer physical scale. See [physical-confirmation semantics](docs/physical-warning-semantics.md)
-for the decision and authoritative references. No PDF or scale-measurement support was
-added; verified PDF/vector dimensions remain a possible future enhancement only.
-
-These results support reviewer inspection; they are not regulatory approval or a legal-compliance determination. Detailed rules and limitations are documented in [architecture.md](docs/architecture.md).
-
-### Run the frontend
-
-In a second terminal:
+Run the frontend, in a second terminal:
 
 ```sh
 cd frontend
 pnpm dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). A development-only status indicator confirms the backend connection. Start the backend first; after changing its availability, refresh the page to repeat the check.
+Open [http://localhost:5173](http://localhost:5173). Optionally copy `.env.example` to `.env` at the repository root; defaults work without it, and neither setting needs a secret. If Tesseract is installed outside `PATH`, set `TTB_TESSERACT_COMMAND`. See [architecture.md](docs/architecture.md) for endpoint details (`/api/labels/ocr`, `/api/labels/verify`) and request limits.
 
-### Run checks
+## Testing
 
-From the root with the virtual environment active:
+Backend:
 
 ```sh
 python -m pytest -c backend/pyproject.toml backend/tests
@@ -239,7 +158,7 @@ python -m ruff check backend
 python -m ruff format --check backend
 ```
 
-From `frontend/`:
+Frontend (from `frontend/`):
 
 ```sh
 pnpm test
@@ -249,78 +168,27 @@ pnpm format:check
 pnpm build
 ```
 
-Run the deterministic generated-label evaluation corpus against real Tesseract:
+Production Docker build:
 
 ```sh
-python backend/scripts/evaluate_labels.py
+docker build --target production -t ttb-label-verification .
 ```
 
-Add `--json` for case-level OCR text, expected/actual differences, per-check counts, and latency data. The script exits nonzero for OCR/processing failures or false confident matches. Corpus metadata and images are generated in memory; proprietary assets and output files are not required.
-
-Run the separate repository real-label regression set:
-
-```sh
-python backend/scripts/evaluate_real_labels.py
-```
-
-The real-label runner discovers matching PNG/JPEG/WebP image and JSON stems under `examples/`, decodes the actual image format, and runs the production flow: preprocessing, one full-image Tesseract TSV invocation, spatial reconstruction, warning exclusion, conditional bounded crop refinement, extraction, and comparison. `--json` includes raw full-image OCR, initial and final candidates/results, crop OCR evidence, call counts, every field and warning result, and per-case latency. Real-label counts are intentionally reported separately from the generated corpus.
-
-`pnpm build` writes `frontend/dist`. For a local production-serving check, set `TTB_FRONTEND_DIST` to that directory's absolute path and start FastAPI. For example, in PowerShell from the root:
-
-```powershell
-$env:TTB_FRONTEND_DIST = (Resolve-Path frontend/dist).Path
-$env:TTB_ENVIRONMENT = 'production'
-python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The production bundle omits the development health indicator. Remove these environment overrides before returning to API-only development.
+Deeper OCR/regression evaluation commands (`backend/scripts/evaluate_labels.py`, `backend/scripts/evaluate_real_labels.py`) and their evidence are documented in [requirements.md](docs/requirements.md) and the dated audit reports in `docs/`.
 
 ## Performance
 
 - **Synthetic regression:** 18 generated cases completed all 306 expected status checks without an OCR failure. Median total time was about 0.5 seconds.
 - **Real-label regression:** six TTB sample fixtures had a median total under one second; the slowest completed in about 1.2 seconds with the bounded maximum of four OCR calls.
-- **Optional batch check:** a local production container processed one, five, and ten one-call
-  samples in about 0.57, 2.02, and 3.50 seconds respectively at concurrency two. Mean per-item
-  latency was about 0.68 seconds for the concurrent runs, and container memory peaked near 170 MB.
+- **Optional batch check:** a local production container processed one, five, and ten one-call samples in about 0.57, 2.02, and 3.50 seconds respectively at concurrency two.
 
-These are repeatable measurements from one Linux development host, not production accuracy,
-latency, or capacity guarantees. Generated and real-label results are intentionally reported
-separately.
+These are repeatable measurements from one development host, not production accuracy, latency, or capacity guarantees. Generated and real-label results are intentionally reported separately.
 
-## Docker
+## Troubleshooting
 
-### Development with hot reload
-
-From the root:
-
-```sh
-docker compose up --build
-```
-
-Open [http://localhost:5173](http://localhost:5173). The frontend proxies API requests to the backend service; the API is also available on [http://localhost:8000/api/health](http://localhost:8000/api/health). Source directories are mounted for reload. Rebuild after changing dependencies or build configuration.
-
-Stop with Ctrl+C, then `docker compose down`.
-
-### Single-container production build
-
-```sh
-docker build --target production -t ttb-label-verification .
-docker run --rm --name ttb-label-verification -p 127.0.0.1:8000:8000 ttb-label-verification
-```
-
-Open [http://localhost:8000](http://localhost:8000). This image contains the compiled frontend, FastAPI, Tesseract, and English OCR data, and runs as a non-root user. It includes a health check and needs no external AI service or storage volume. The default final Docker stage is also `production`.
-
-Container checks can be run with:
-
-```sh
-docker compose run --rm backend python -m pytest -c backend/pyproject.toml backend/tests
-docker compose run --rm frontend pnpm test
-```
-
-The container supports raw OCR, complete common-field application-data verification, optional
-client-orchestrated batch verification, and warning analysis. The reviewer deployment is available
-at [https://ttb.markwightman.org](https://ttb.markwightman.org); local and container instructions
-remain the reproducible submission path.
+- **Docker isn't running:** start Docker Desktop (or the Docker Engine daemon) before `docker compose up`.
+- **Port 8000 is already in use:** stop whatever else is using it, or change the published port for the `app` service in `docker-compose.yml` (for example `"127.0.0.1:8080:8000"`), then open that port instead.
+- **The first build is slow:** the first `docker compose up --build` downloads base images and dependencies; later builds reuse Docker's layer cache and are much faster.
 
 ## Limitations and tradeoffs
 
@@ -332,9 +200,10 @@ remain the reproducible submission path.
 - Batch state is not persisted or resumable after a browser reload.
 - Generated and sample fixtures are regression evidence, not production-accuracy estimates.
 
-## Submission status
+## Documentation
 
-The scoped single-label prototype and optional client-side batch enhancement are implemented and
-merged to `main`; the public deployment reflects this branch. Further real-label sampling would
-improve confidence in deterministic extraction limits, but the generated corpus and six TTB sample
-fixtures remain deliberately separate and neither is presented as production accuracy evidence.
+- [requirements.md](docs/requirements.md) — requirement-by-requirement scope, sourcing, and acceptance criteria.
+- [architecture.md](docs/architecture.md) — request flow, extraction/comparison rules, and tradeoffs.
+- [physical-warning-semantics.md](docs/physical-warning-semantics.md) — the automated-vs-physical status decision record.
+- `docs/*-accuracy*.md` and `docs/ocr-accuracy-pass*.md` — dated OCR and Government-Warning evaluation passes, kept as point-in-time evidence.
+- [examples/README.md](examples/README.md) — the real and synthetic label fixtures used for regression testing.
